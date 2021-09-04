@@ -15,16 +15,15 @@ import Time
 
 type alias Model =
     { progress : Progress
-    , focusTime : Time.Posix
+    , startTime : Time.Posix
     }
 
 type Msg
     = DoNothing
-    | TextInput String
+    | InitSeed Time.Posix
+    | TextFieldInput String
     | AttemptChar Char Time.Posix
     | TextFieldFocus
-    | SetFocusTime Time.Posix
-    | TextFieldBlur
     | SetStartTime Time.Posix
     | Frame Time.Posix
 
@@ -40,10 +39,12 @@ main =
 init : () -> (Model, Cmd Msg)
 init _ =
     Tuple.pair
-        { progress = Progress.default
-        , focusTime = Time.millisToPosix 0
+        { progress = Progress.empty
+        , startTime = Time.millisToPosix 0
         }
-        Cmd.none
+        (Time.now
+            |> Task.perform InitSeed
+        )
 
 view : Model -> Browser.Document Msg
 view model =
@@ -51,14 +52,13 @@ view model =
     , body =
         [ Progress.viewCurrentGlyph model.progress
         , Html.input
-            [ Html.Events.onInput TextInput
+            [ Html.Events.onInput TextFieldInput
             , Html.Events.onFocus TextFieldFocus
             , Html.Attributes.id "in"
             , style "height" "32px"
             , Html.Attributes.value ""
             ]
             []
-        --, Html.text (Debug.toString model.progress.startTime)
         , Progress.viewAllGlyphs model.progress
         ]
     }
@@ -79,68 +79,70 @@ update msg model =
                 model
                 Cmd.none
         
-        TextInput string ->
-            case String.uncons string of
-                Just (char, _) ->
-                    Tuple.pair
-                        model
-                        (Time.now
-                        |> Task.perform (AttemptChar char)
-                        )
-
-                Nothing ->
-                    Tuple.pair
-                        model
-                        Cmd.none
-
-        AttemptChar char time ->
+        InitSeed time ->
             Tuple.pair
                 { model
                 | progress =
-                    model.progress
-                    |> Progress.attemptChar char time
+                    Progress.init time
                 }
                 Cmd.none
-                |> thenUpdate (SetFocusTime time)
+        
+        TextFieldInput string ->
+            Tuple.pair
+                model
+                (case String.uncons string of
+                    Just (char, _) ->
+                        Time.now
+                        |> Task.perform (AttemptChar char)
+
+                    Nothing ->
+                        Cmd.none
+                )
+
+        AttemptChar char time ->
+            let
+                timeDiff : Int
+                timeDiff =
+                    (-)
+                        (Time.posixToMillis time)
+                        (Time.posixToMillis model.startTime)
+            in
+            Tuple.pair
+                (case
+                    model.progress
+                    |> Progress.attemptChar
+                        char
+                        timeDiff
+                of
+                    Just newProgress ->
+                        { model
+                        | progress = newProgress
+                        , startTime = time
+                        }
+                
+                    Nothing ->
+                        model
+                )
+                Cmd.none
 
         TextFieldFocus ->
             Tuple.pair
                 model
-                (Cmd.batch
-                    [ Time.now
-                        |> Task.perform SetStartTime
-                    --, Process.sleep 4000
-                    --    |> Task.andThen (\_ -> Browser.Dom.blur "in")
-                    --    |> Task.attempt (\_ -> Blurred)
-                    ]
+                (Time.now
+                |> Task.perform SetStartTime
                 )
         
-        SetFocusTime time ->
-            Tuple.pair
-                { model
-                | focusTime = time
-                }
-                Cmd.none
-
-        TextFieldBlur ->
-            Tuple.pair
-                model
-                Cmd.none
-
         SetStartTime time ->
             Tuple.pair
                 { model
-                | progress =
-                    model.progress
-                    |> Progress.setStartTime time
+                | startTime = time
                 }
                 Cmd.none
-                |> thenUpdate (SetFocusTime time)
         
         Frame time ->
             Tuple.pair
                 model
-                (case (Time.posixToMillis time) > (Time.posixToMillis model.focusTime) + 4000 of
+                (case (Time.posixToMillis time) > (Time.posixToMillis model.startTime) + 4000 of
                     True ->
                         Browser.Dom.blur "in"
                         |> Task.attempt (\_ -> DoNothing)

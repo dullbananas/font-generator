@@ -1,10 +1,10 @@
 module Main.Progress exposing
     ( Progress
-    , default
+    , init
+    , empty
     , viewAllGlyphs
     , viewCurrentGlyph
     , attemptChar
-    , setStartTime
     )
 
 import Array exposing (Array)
@@ -17,11 +17,27 @@ import Random.Extra
 import Random.List
 import Time
 
+populationSize : Int
+populationSize =
+    8
+
+invertPixel : Int -> Int
+invertPixel =
+    negate >> (+) 1
+
+rounds : Int
+rounds =
+    1
+
 type alias Progress =
     { glyphs : Dict Char (Array Glyph)
     , glyphQueue : List (Int, Char)
-    , startTime : Time.Posix
     , seed : Random.Seed
+    }
+
+type alias Glyph =
+    { pixels : List Int
+    , score : Int
     }
 
 generateDefault : Random.Generator (Random.Seed -> Progress)
@@ -33,16 +49,15 @@ generateDefault =
                 pixels
                 |> List.map invertPixel
             , score = 0
-            , trials = 0
             }
-            |> List.repeat charPopulation
+            |> List.repeat populationSize
             |> List.map mutateGlyph
             |> Random.Extra.sequence
             |> Random.map Array.fromList
 
         glyphs : Random.Generator (Dict Char (Array Glyph))
         glyphs =
-            initGlyphs
+            defaultPixels
             |> List.map
                 (\(char, pixels) ->
                     Random.pair
@@ -56,30 +71,19 @@ generateDefault =
     in
     Random.constant Progress
     |> andMap glyphs
-    |> andMap
-        (initGlyphs
-        |> List.map Tuple.first
-        |> generateGlyphQueue
-        )
-    |> andMap (Random.constant (Time.millisToPosix 0))
+    |> andMap generateGlyphQueue
 
-charPopulation : Int
-charPopulation =
-    8
-
-generateGlyphQueue : List Char -> Random.Generator (List (Int, Char))
+generateGlyphQueue : Random.Generator (List (Int, Char))
 generateGlyphQueue =
-    List.concatMap
-        (List.repeat charPopulation
+    defaultPixels
+    |> List.map Tuple.first
+    |> List.concatMap
+        (List.repeat populationSize
         >> List.indexedMap Tuple.pair
         )
-    >> Random.List.shuffle
-
-type alias Glyph =
-    { pixels : List Int
-    , score : Int
-    , trials : Int
-    }
+    |> Random.List.shuffle
+    |> Random.list rounds
+    |> Random.map List.concat
 
 mutateGlyph : Glyph -> Random.Generator Glyph
 mutateGlyph glyph =
@@ -95,47 +99,53 @@ mutateGlyph glyph =
         (\newPixels ->
             { pixels = newPixels
             , score = 0
-            , trials = 0
             }
         )
 
-invertPixel : Int -> Int
-invertPixel =
-    negate >> (+) 1
-
-default : Progress
-default =
+init : Time.Posix -> Progress
+init time =
     let
         (progress, seed) =
-            Random.initialSeed 8
+            time
+            |> Time.posixToMillis
+            |> Random.initialSeed
             |> Random.step generateDefault
     in
     progress seed
 
+empty : Progress
+empty =
+    { glyphs = Dict.empty
+    , glyphQueue = []
+    , seed = Random.initialSeed 0
+    }
+
 viewGlyph : Glyph -> Html msg
-viewGlyph {pixels} =
-    Html.img
-        [ Html.Attributes.src
-            (Image.fromList
-                {width = 8}.width
-                (pixels
-                |> List.map
-                    (\pixel ->
-                        (pixel * 0xFFFFFF00)
-                        + 0x000000FF
-                    )
-                )
-            |> Image.toBmpUrl
-            )
-        , style "height" "64px"
-        , style "image-rendering" "pixelated"
-        ]
-        []
-    |> List.singleton
-    |> Html.div
+viewGlyph glyph =
+    Html.div
         [ style "border" "1px solid blue"
         , style "padding" "4px 4px"
         , style "display" "inline-block"
+        ]
+        [ Html.img
+            [ Html.Attributes.src
+                (Image.fromList
+                    {width = 8}.width
+                    (glyph.pixels
+                    |> List.map
+                        (\pixel ->
+                            (pixel * 0xFFFFFF00)
+                            + 0x000000FF
+                        )
+                    )
+                |> Image.toBmpUrl
+                )
+            , style "height" "64px"
+            , style "image-rendering" "pixelated"
+            ]
+            []
+        , Html.br [] []
+        , Html.text (String.fromInt glyph.score)
         ]
 
 viewAllGlyphs : Progress -> Html msg
@@ -143,6 +153,7 @@ viewAllGlyphs =
     .glyphs
     >> Dict.values
     >> List.concatMap Array.toList
+    >> List.sortBy .score
     >> List.map viewGlyph
     >> Html.div []
 
@@ -152,123 +163,126 @@ viewCurrentGlyph progress =
     |> List.head
     |> Maybe.andThen
         (\(index, char) ->
-            progress.glyphs
-            |> Dict.get char
+            Just progress.glyphs
+            |> Maybe.andThen (Dict.get char)
             |> Maybe.andThen (Array.get index)
         )
     |> Maybe.map viewGlyph
     |> Maybe.withDefault (Html.text "")
 
-attemptChar : Char -> Time.Posix -> Progress -> Progress
-attemptChar charInput time progress =
-    let
-        timeDiff : Int
-        timeDiff =
-            (-)
-                (Time.posixToMillis time)
-                (Time.posixToMillis progress.startTime)
-    in
+attemptChar : Char -> Int -> Progress -> Maybe Progress
+attemptChar charInput timeDiff progress =
     case progress.glyphQueue of
         (index, char) :: nextQueue ->
-            case charInput == char of
+            case (==) charInput char of
                 True ->
-                    { progress
-                    | glyphs =
-                        progress.glyphs
-                        |> updateGlyphStats
-                            timeDiff
-                            char
-                            index
-                    , glyphQueue =
-                        nextQueue
-                    }
+                    Just
+                        { progress
+                        | glyphs =
+                            progress.glyphs
+                            |> updateGlyphStats
+                                timeDiff
+                                char
+                                index
+                        , glyphQueue =
+                            nextQueue
+                        }
 
                 False ->
-                    progress
+                    Nothing
 
         _ ->
-            progress
+            Nothing
 
 updateGlyphStats : Int -> Char -> Int -> Dict Char (Array Glyph) -> Dict Char (Array Glyph)
 updateGlyphStats timeDiff char index =
     Dict.update char
     <| Maybe.map
     <| Array.indexedMap
-    <| \indexBeingChecked glyph ->
-        case indexBeingChecked == index of
-            True ->
-                { glyph
-                | score = glyph.score + timeDiff
-                , trials = glyph.trials + 1
-                }
+    <| \itemIndex glyph ->
+        { glyph
+        | score =
+            case (==) itemIndex index of
+                True ->
+                    glyph.score + timeDiff
 
-            False ->
-                glyph
+                False ->
+                    glyph.score
+        }
 
-setStartTime : Time.Posix -> Progress -> Progress
-setStartTime time progress =
-    { progress
-    | startTime = time
-    }
-
-initGlyphs : List (Char, List Int)
-initGlyphs =
+defaultPixels : List (Char, List Int)
+defaultPixels =
     let
-        g =
-            Tuple.pair
+        -- glyph
+        g : Char -> List (List { pixel : Int }) -> (Char, List Int)
+        g key pixels =
+            (key, (List.concat >> List.map .pixel) pixels)
+
+        -- repeat
+        r : Int -> a -> List a
+        r =
+            List.repeat
+        
+        rconcat : Int -> List (List a) -> List a
+        rconcat count =
+            List.repeat count >> List.concatMap List.concat
+        
+        row : Int
+        row =
+            8
+
+        blank : { pixel : Int }
+        blank =
+            { pixel = 0 }
+
+        filled : { pixel : Int }
+        filled =
+            { pixel = 1 }
+        
+        fillSides : Int -> List { pixel : Int }
+        fillSides count =
+            rconcat count
+                [ [filled]
+                , r (row - 2) blank
+                , [filled]
+                ]
     in
     [ g 'a'
-        [0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,1,1,1,1,1,1,1,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,1,1,1,1,1,1,1
-        ,0,0,0,0,0,0,0,1
-        ,0,0,0,0,0,0,0,0
+        [ r (row * 7) blank
+        , r row filled
+        , rconcat 5
+            [ [filled]
+            , r (row - 2) blank
+            , [filled]
+            ]
+        , r row filled
+        , r (row - 1) blank
+        , [filled]
+        , r row blank
         ]
     , g 'b'
-        [1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,0,0,0,0,0,0,0
-        ,1,1,1,1,1,1,1,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,1,1,1,1,1,1,1
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
+        [ rconcat 7
+            [ [filled]
+            , r (row - 1) blank
+            ]
+        , r row filled
+        , rconcat 5
+            [ [filled]
+            , r (row - 2) blank
+            , [filled]
+            ]
+        , r row filled
+        , r (row * 2) blank
         ]
     , g 'o'
-        [0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
-        ,1,1,1,1,1,1,1,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,0,0,0,0,0,0,1
-        ,1,1,1,1,1,1,1,1
-        ,0,0,0,0,0,0,0,0
-        ,0,0,0,0,0,0,0,0
+        [ r (row * 7) blank
+        , r row filled
+        , rconcat 5
+            [ [filled]
+            , r (row - 2) blank
+            , [filled]
+            ]
+        , r row filled
+        , r (row * 2) blank
         ]
     ]
