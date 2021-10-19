@@ -1,54 +1,63 @@
-module Main exposing
-    ( main
+module Frontend exposing
+    ( app
     )
 
 import Browser
 import Browser.Dom
 import Browser.Events
+import Browser.Navigation
 import Html
-import Html.Attributes exposing (style)
+import Html.Attributes exposing
+    ( style
+    )
 import Html.Events
-import Main.Progress as Progress exposing (Progress)
+import Lamdera
+import Main.Progress as Progress exposing
+    ( Progress
+    )
 import Process
 import Task
 import Time
+import Types exposing
+    ( ..
+    )
+import Url exposing
+    ( Url
+    )
 
 type alias Model =
-    { progress : Progress
-    , startTime : Time.Posix
-    }
+    FrontendModel
 
-type Msg
-    = DoNothing
-    | InitSeed Time.Posix
-    | TextFieldInput String
-    | AttemptChar Char Time.Posix
-    | TextFieldFocus
-    | SetStartTime Time.Posix
-    | Frame Time.Posix
+type alias Msg =
+    FrontendMsg
 
-main : Program () Model Msg
-main =
-    Browser.document
+app =
+    Lamdera.frontend
         { init = init
-        , view = view
+        , onUrlRequest = always DoNothing
+        , onUrlChange = always DoNothing
         , update = update
+        , updateFromBackend = updateFromBackend
         , subscriptions = subscriptions
+        , view = view
         }
 
-init : () -> (Model, Cmd Msg)
-init _ =
-    Tuple.pair
+init : Url -> Browser.Navigation.Key -> (Model, Cmd Msg)
+init url navigationKey =
+    (
         { progress = Progress.empty
         , startTime = Time.millisToPosix 0
         }
-        (Time.now
+    ,
+        ( Time.now
             |> Task.perform InitSeed
         )
+    )
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Font genetic algorithm"
+    { title =
+        "Font genetic algorithm"
     , body =
         [ Progress.viewCurrentGlyph model.progress
         , Html.input
@@ -150,6 +159,11 @@ update msg model =
                     False ->
                         Cmd.none
                 )
+
+updateFromBackend : ToFrontend -> Model -> ( Model, Cmd Msg )
+updateFromBackend msg model =
+    case msg of
+        Nb -> (model,Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
