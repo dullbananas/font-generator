@@ -6,24 +6,18 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
-import Html
-import Html.Attributes exposing
-    ( style
-    )
-import Html.Events
+import Dict exposing (Dict)
+import Html exposing (Html)
+import Html.Attributes as Attribute
+import Html.Events as Event
+import Html.Lazy
 import Lamdera
-import Main.Progress as Progress exposing
-    ( Progress
-    )
-import Process
+import Main.Glyph as Glyph exposing (Glyph)
+import Main.Route as Route exposing (Route)
 import Task
 import Time
-import Types exposing
-    ( ..
-    )
-import Url exposing
-    ( Url
-    )
+import Types exposing (..)
+import Url exposing (Url)
 
 type alias Model =
     FrontendModel
@@ -34,8 +28,8 @@ type alias Msg =
 app =
     Lamdera.frontend
         { init = init
-        , onUrlRequest = always DoNothing
-        , onUrlChange = always DoNothing
+        , onUrlRequest = UrlRequest
+        , onUrlChange = UrlChange
         , update = update
         , updateFromBackend = updateFromBackend
         , subscriptions = subscriptions
@@ -44,129 +38,254 @@ app =
 
 init : Url -> Browser.Navigation.Key -> (Model, Cmd Msg)
 init url navigationKey =
-    (
-        { progress = Progress.empty
+    Tuple.pair
+        { url = url
+        , navigationKey = navigationKey
         , startTime = Time.millisToPosix 0
+        , currentGlyph = Nothing
+        , newGlyphs = Dict.empty
+        , newChar = ""
         }
-    ,
-        ( Time.now
-            |> Task.perform InitSeed
-        )
-    )
+        Cmd.none
 
 view : Model -> Browser.Document Msg
 view model =
     { title =
-        "Font genetic algorithm"
+        "Fonts"
     , body =
-        [ Progress.viewCurrentGlyph model.progress
-        , Html.input
-            [ Html.Events.onInput TextFieldInput
-            , Html.Events.onFocus TextFieldFocus
-            , Html.Attributes.id "in"
-            , style "height" "32px"
-            , Html.Attributes.value ""
-            ]
-            []
-        , Progress.viewAllGlyphs model.progress
-        ]
+        case Route.fromUrl model.url of
+            Route.NotFound ->
+                [ Html.text "Page not found"
+                ]
+
+            Route.Test id ->
+                [ [Glyph.view model.currentGlyph]
+                    |> Html.div
+                        [ Attribute.style "display" "flex"
+                        , Attribute.style "flex-direction" "row"
+                        , Attribute.style "align-content" "center"
+                        ]
+                , Html.input
+                    [ Attribute.style "width" "100%"
+                    , Attribute.style "height" "64px"
+                    , Event.onFocus TextFocus
+                    , Event.onInput (TextChange id)
+                    , Attribute.value ""
+                    ]
+                    []
+                ]
+
+            Route.NewGlyphs char ->
+                [ model.newGlyphs
+                    |> Dict.keys
+                    |> List.map
+                        (\c ->
+                            Html.a
+                                [ Attribute.style "margin-right" "32px"
+                                , Attribute.href ("/new/" ++ String.fromChar c)
+                                ]
+                                [ Glyph.viewThumbnail (Dict.get c model.newGlyphs)
+                                ]
+                        )
+                    |> Html.div
+                        [ Attribute.style "font-size" "32px"
+                        , Attribute.style "color" "#000000"
+                        ]
+                , Html.form
+                    [ Event.onSubmit NewCharSubmit
+                    ]
+                    [ Html.input
+                        [ Event.onInput NewCharChange
+                        , Attribute.value model.newChar
+                        ]
+                        []
+                    , Html.input
+                        [ Attribute.type_ "submit"
+                        , Attribute.value "Add characters"
+                        ]
+                        []
+                    ]
+                , Html.hr [] []
+                , model.newGlyphs
+                    |> Dict.get char
+                    |> Maybe.map (viewGlyphEdit char)
+                    |> Maybe.withDefault []
+                    |> (::)
+                        ( Html.tr
+                            []
+                            (List.map (\text -> Html.th [] [Html.text text])
+                                [ "path"
+                                , "point"
+                                , "x"
+                                , "y"
+                                , "radians/pi"
+                                , "curviness"
+                                ]
+                            )
+                        )
+                    |> Html.table []
+                ]
     }
 
-thenUpdate : Msg -> (Model, Cmd Msg) -> (Model, Cmd Msg)
-thenUpdate msg (model, cmd) =
+viewGlyphEdit : Char -> Glyph -> List (Html Msg)
+viewGlyphEdit char glyph =
+    glyph
+    |> List.indexedMap
+        (\pathId path ->
+            path
+            |> List.indexedMap (Html.Lazy.lazy2 (viewPointEdit char pathId))
+            --|> List.concat
+        )
+    |> List.concat
+
+viewPointEdit : Char -> Int -> Int -> Glyph.Point -> Html Msg
+viewPointEdit char pathId pointId point =
     let
-        (model2, cmd2) =
-            update msg model
+        numInput :
+            (Float -> Glyph.Point)
+            -> (Glyph.Point -> Float)
+            -> Html Msg
+        numInput numToPoint getNum =
+            Html.input
+                [ Event.onInput <|
+                    String.toFloat
+                    >> Maybe.withDefault 0
+                    >> numToPoint
+                    >> PointChange char pathId pointId
+                , Attribute.value (point |> getNum |> String.fromFloat)
+                ]
+                []
     in
-        (model2, Cmd.batch [cmd, cmd2])
+    Html.tr
+        []
+        (List.map (\element -> Html.td [] [element])
+            [ Html.text (String.fromInt pathId)
+            , Html.text (String.fromInt pointId)
+            , numInput
+                (\n -> {point | x = n})
+                .x
+            , numInput
+                (\n -> {point | y = -n})
+                (.y >> negate)
+            , numInput
+                (\n -> {point | radians = n * Basics.pi})
+                (.radians >> (\n -> n / Basics.pi))
+            , numInput
+                (\n -> {point | curviness = n})
+                .curviness
+            ]
+        )
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
-        DoNothing ->
-            Tuple.pair
-                model
-                Cmd.none
-        
-        InitSeed time ->
-            Tuple.pair
-                { model
-                | progress =
-                    Progress.init time
-                }
-                Cmd.none
-        
-        TextFieldInput string ->
-            Tuple.pair
-                model
-                (case String.uncons string of
-                    Just (char, _) ->
-                        Time.now
-                        |> Task.perform (AttemptChar char)
+        UrlRequest request ->
+            ( model
+            , case request of
+                Browser.Internal url ->
+                    Browser.Navigation.pushUrl
+                        model.navigationKey
+                        (Url.toString url)
 
-                    Nothing ->
-                        Cmd.none
+                Browser.External url ->
+                    Browser.Navigation.load
+                        url
+            )
+
+        UrlChange url ->
+            ( { model | url = url }
+            , case Route.fromUrl url of
+                Route.Test id ->
+                    Lamdera.sendToBackend (GlyphRequest id Nothing)
+
+                _ ->
+                    Cmd.none
+            )
+
+        NewCharChange newChar ->
+            ( { model | newChar = newChar }
+            , Cmd.none
+            )
+
+        NewCharSubmit ->
+            { model | newChar = "" }
+            |> updateNewGlyphs
+                (model.newChar
+                    |> String.toList
+                    |> List.map (\char -> (char, Glyph.init))
+                    |> Dict.fromList
                 )
 
-        AttemptChar char time ->
-            let
-                timeDiff : Int
-                timeDiff =
-                    (-)
-                        (Time.posixToMillis time)
+        PointChange char pathId pointId point ->
+            model
+            |> updateNewGlyphs
+                (case Dict.get char model.newGlyphs of
+                    Just glyph ->
+                        Dict.empty
+                        |> Dict.insert char
+                            ( glyph
+                                |> Glyph.setPoint pathId pointId point
+                            )
+
+                    Nothing ->
+                        Dict.empty
+                )
+
+        TextFocus ->
+            ( model
+            , Task.perform StartTimeChange Time.now
+            )
+
+        StartTimeChange time ->
+            ( { model | startTime = time }
+            , Cmd.none
+            )
+
+        TextChange id string ->
+            case (==)
+                (model.currentGlyph |> Maybe.map Tuple.first)
+                (String.uncons string |> Maybe.map Tuple.first)
+            of
+                False ->
+                    ( model
+                    , Cmd.none
+                    )
+
+                True ->
+                    ( model
+                    , Task.perform (EndTime id) Time.now
+                    )
+
+        EndTime id endTime ->
+            ( { model | currentGlyph = Nothing }
+            , Lamdera.sendToBackend
+                ( GlyphRequest
+                    id
+                    ( Just <| toFloat <| (-)
+                        (Time.posixToMillis endTime)
                         (Time.posixToMillis model.startTime)
-            in
-            Tuple.pair
-                (case
-                    model.progress
-                    |> Progress.attemptChar
-                        char
-                        timeDiff
-                of
-                    Just newProgress ->
-                        { model
-                        | progress = newProgress
-                        , startTime = time
-                        }
-                
-                    Nothing ->
-                        model
+                    )
                 )
-                Cmd.none
+            )
 
-        TextFieldFocus ->
-            Tuple.pair
-                model
-                (Time.now
-                |> Task.perform SetStartTime
-                )
-        
-        SetStartTime time ->
-            Tuple.pair
-                { model
-                | startTime = time
-                }
-                Cmd.none
-        
-        Frame time ->
-            Tuple.pair
-                model
-                (case (Time.posixToMillis time) > (Time.posixToMillis model.startTime) + 4000 of
-                    True ->
-                        Browser.Dom.blur "in"
-                        |> Task.attempt (\_ -> DoNothing)
-
-                    False ->
-                        Cmd.none
-                )
+updateNewGlyphs : Dict Char Glyph -> Model -> (Model, Cmd Msg)
+updateNewGlyphs newItems model =
+    Tuple.pair
+        { model
+        | newGlyphs =
+            model.newGlyphs
+            |> Dict.union newItems
+        }
+        (Lamdera.sendToBackend (NewGlyphsSave newItems))
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd Msg )
 updateFromBackend msg model =
     case msg of
-        Nb -> (model,Cmd.none)
+        GlyphChange tuple ->
+            ( { model | currentGlyph = Just tuple }
+            , Task.perform StartTimeChange Time.now
+            )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch
-        [ Browser.Events.onAnimationFrame Frame
-        ]
+    Sub.none
