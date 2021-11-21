@@ -2,6 +2,7 @@ module Frontend exposing
     ( app
     )
 
+import Bridge exposing (ToBackend(..))
 import Browser
 import Browser.Dom
 import Browser.Events
@@ -16,14 +17,14 @@ import Main.Glyph as Glyph exposing (Glyph)
 import Main.Route as Route exposing (Route)
 import Task
 import Time
-import Types exposing (..)
+import Types exposing (FrontendMsg(..), ToFrontend(..))
 import Url exposing (Url)
 
 type alias Model =
-    FrontendModel
+    Types.FrontendModel
 
 type alias Msg =
-    FrontendMsg
+    Types.FrontendMsg
 
 app =
     Lamdera.frontend

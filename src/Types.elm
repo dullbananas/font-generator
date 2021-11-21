@@ -2,6 +2,7 @@ module Types exposing
     ( ..
     )
 
+import Bridge
 import Browser
 import Browser.Navigation
 import Dict exposing (Dict)
@@ -40,9 +41,8 @@ type FrontendMsg
     | TextChange Int String
     | EndTime Int Time.Posix
 
-type ToBackend
-    = NewGlyphsSave (Dict Char Glyph)
-    | GlyphRequest Int (Maybe Float)
+type alias ToBackend =
+    Bridge.ToBackend
 
 type BackendMsg
     = N

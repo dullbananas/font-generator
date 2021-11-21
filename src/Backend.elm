@@ -2,17 +2,18 @@ module Backend exposing
     ( app
     )
 
+import Bridge exposing (ToBackend(..))
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import Main.Progress as Progress exposing (Progress)
 import Random
-import Types exposing (..)
+import Types exposing (BackendMsg(..), ToFrontend(..))
 
 type alias Model =
-    BackendModel
+    Types.BackendModel
 
 type alias Msg =
-    BackendMsg
+    Types.BackendMsg
 
 app =
     Lamdera.backend
