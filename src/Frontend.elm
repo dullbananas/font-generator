@@ -131,6 +131,7 @@ view model =
 viewGlyphEdit : Char -> Glyph -> List (Html Msg)
 viewGlyphEdit char glyph =
     glyph
+    |> Glyph.paths
     |> List.indexedMap
         (\pathId path ->
             path
@@ -166,8 +167,8 @@ viewPointEdit char pathId pointId point =
                 (\n -> {point | x = n})
                 .x
             , numInput
-                (\n -> {point | y = -n})
-                (.y >> negate)
+                (\n -> {point | y = n})
+                .y
             , numInput
                 (\n -> {point | radians = n * Basics.pi})
                 (.radians >> (\n -> n / Basics.pi))

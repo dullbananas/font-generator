@@ -3,6 +3,7 @@ module Main.Glyph exposing
     , Path
     , Point
     , Family
+    , paths
     , init
     , view
     , viewThumbnail
@@ -20,8 +21,12 @@ import Svg exposing (Svg)
 import Svg.Attributes as SvgA
 import Svg.PathD as SvgPath
 
-type alias Glyph =
-    List Path
+type Glyph
+    = Glyph Internals
+
+type alias Internals =
+    { paths : List Path
+    }
 
 type alias Path =
     List Point
@@ -35,6 +40,10 @@ type alias Point =
 
 type alias Family =
     Dict Char Glyph
+
+paths : Glyph -> List Path
+paths (Glyph glyph) =
+    glyph.paths
 
 mutateFamily : Family -> Random.Generator Family
 mutateFamily glyphs =
@@ -50,10 +59,11 @@ mutateFamily glyphs =
     |> Random.map Dict.fromList
 
 mutate : Glyph -> Random.Generator Glyph
-mutate glyph =
-    glyph
+mutate (Glyph glyph) =
+    glyph.paths
     |> List.map (List.map mutatePoint >> Random.Extra.combine)
     |> Random.Extra.combine
+    |> Random.map (Internals >> Glyph)
 
 mutatePoint : Point -> Random.Generator Point
 mutatePoint p =
@@ -70,7 +80,9 @@ mutateFloat scale num =
 
 init : Glyph
 init =
-    [initPath]
+    Glyph
+        { paths = [initPath]
+        }
 
 initPath : Path
 initPath =
@@ -111,10 +123,15 @@ viewThumbnail maybe =
             Html.text ""
 
 setPoint : Int -> Int -> Point -> Glyph -> Glyph
-setPoint pathId pointId point =
-    List.Extra.updateAt
-        pathId
-        (List.Extra.setAt pointId point)
+setPoint pathId pointId point (Glyph glyph) =
+    Glyph
+        { glyph
+        | paths =
+            glyph.paths
+            |> List.Extra.updateAt
+                pathId
+                (List.Extra.setAt pointId point)
+        }
 
 viewEditor : Point -> Glyph -> Html msg
 viewEditor point glyph =
@@ -134,12 +151,12 @@ viewEditor point glyph =
         ]
 
 toSvg : String -> Glyph -> Svg msg
-toSvg transform glyph =
+toSvg transform (Glyph glyph) =
     Svg.path
         [ SvgA.transform transform
         , SvgA.fillRule "evenodd"
         , SvgA.d <| SvgPath.pathD <|
-            List.concatMap pathToSegments glyph
+            List.concatMap pathToSegments glyph.paths
         ]
         []
 
