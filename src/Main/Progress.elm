@@ -14,7 +14,10 @@ import Random.Extra exposing (andMap)
 import Random.List
 import Time
 
-type alias Progress =
+type Progress
+    = Progress Internals
+
+type alias Internals =
     { parentHistory : List Parent
     , nextParent : Parent
     , remainingGlyphs : List (Char, Glyph)
@@ -55,7 +58,8 @@ parentSubmitTime (char, glyph) time parent =
                 else parent
 
 submitTime : Lamdera.ClientId -> Float -> Progress -> Progress
-submitTime clientId time progress =
+submitTime clientId time (Progress progress) =
+    Progress <|
     case
         progress.currentGlyphs
         |> Dict.get clientId
@@ -76,7 +80,7 @@ submitTime clientId time progress =
             }
 
 nextGlyph : Lamdera.ClientId -> Progress -> Random.Generator Progress
-nextGlyph clientId progress =
+nextGlyph clientId (Progress progress) =
     ( case progress.remainingGlyphs of
         _ :: _ ->
             Random.pair
@@ -109,6 +113,7 @@ nextGlyph clientId progress =
                 [] ->
                     progress
         )
+    |> Random.map Progress
 
 init : Glyph.Family -> Random.Generator Progress
 init glyphs =
@@ -118,15 +123,16 @@ init glyphs =
             , scores = Dict.empty
             }
     in
-    Random.constant Progress
+    Random.constant Internals
     |> andMap (Random.constant [])
     |> andMap (Random.constant parent)
     |> andMap (mutateParent parent)
     |> andMap (Random.constant Dict.empty)
     |> andMap (Random.constant "")
+    |> Random.map Progress
 
 getCurrentGlyph : Lamdera.ClientId -> Progress -> Maybe (Char, Glyph)
-getCurrentGlyph clientId progress =
+getCurrentGlyph clientId (Progress progress) =
     progress.currentGlyphs
     |> Dict.get clientId
 
