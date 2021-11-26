@@ -8,8 +8,9 @@ module Main.Glyph exposing
 import Dict exposing (Dict)
 import Html exposing (Html)
 import List.Extra
+import Main.Util as Util
 import Random
-import Random.Extra exposing (andMap)
+import Random.Extra
 import Svg exposing (Svg)
 import Svg.Attributes as SvgA
 import Svg.PathD as SvgPath
@@ -43,12 +44,21 @@ mutate (Glyph glyph) =
     |> Random.map (Internals >> Glyph)
 
 mutatePoint : Point -> Random.Generator Point
-mutatePoint p =
-    Random.constant Point
-    |> andMap (mutateFloat 1 p.x)
-    |> andMap (mutateFloat 1 p.y)
-    |> andMap (mutateFloat 0.1 p.radians)
-    |> andMap (mutateFloat 1 p.curviness)
+mutatePoint point =
+    let
+        await =
+            Util.awaitGenerator
+    in
+    await (mutateFloat 1 point.x) <| \x ->
+    await (mutateFloat 1 point.y) <| \y ->
+    await (mutateFloat 0.1 point.radians) <| \radians ->
+    await (mutateFloat 1 point.curviness) <| \curviness ->
+    Random.constant
+        { x = x
+        , y = y
+        , radians = radians
+        , curviness = curviness
+        }
 
 mutateFloat : Float -> Float -> Random.Generator Float
 mutateFloat scale num =

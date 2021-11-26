@@ -7,8 +7,9 @@ module Main.Progress exposing
 import Dict exposing (Dict)
 import Lamdera
 import Main.Glyph as Glyph exposing (Glyph)
+import Main.Util as Util
 import Random
-import Random.Extra exposing (andMap)
+import Random.Extra
 import Random.List
 import Time
 
@@ -120,14 +121,20 @@ init glyphs =
             { glyphs = glyphs
             , scores = Dict.empty
             }
+
+        await =
+            Util.awaitGenerator
     in
-    Random.constant Internals
-    |> andMap (Random.constant [])
-    |> andMap (Random.constant parent)
-    |> andMap (mutateParent parent)
-    |> andMap (Random.constant Dict.empty)
-    |> andMap (Random.constant "")
-    |> Random.map Progress
+    await (mutateParent parent) <| \remainingGlyphs ->
+    Random.constant
+        ( Progress
+            { parentHistory = []
+            , nextParent = parent
+            , remainingGlyphs = remainingGlyphs
+            , currentGlyphs = Dict.empty
+            , name = ""
+            }
+        )
 
 getCurrentGlyph : Lamdera.ClientId -> Progress -> Maybe (Char, Glyph)
 getCurrentGlyph clientId (Progress progress) =
