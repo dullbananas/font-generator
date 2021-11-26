@@ -145,11 +145,10 @@ mutateParent : Parent -> Random.Generator (List (Char, Glyph))
 mutateParent parent =
     parent.glyphs
     |> Dict.toList
-    |> List.map
+    |> Random.Extra.traverse
         (\(char, glyph) ->
             Random.pair
                 (Random.constant char)
                 (Glyph.mutate glyph)
         )
-    |> Random.Extra.combine
     |> Random.andThen Random.List.shuffle

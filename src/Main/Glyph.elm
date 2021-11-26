@@ -43,7 +43,7 @@ mutate (Glyph glyph) =
         await =
             Util.awaitGenerator
     in
-    await (glyph.paths |> List.map mutatePath |> Random.Extra.combine) <| \newPaths ->
+    await (glyph.paths |> Random.Extra.traverse mutatePath) <| \newPaths ->
     Random.constant
         ( Glyph
             { paths = newPaths
@@ -56,7 +56,7 @@ mutatePath path =
         await =
             Util.awaitGenerator
     in
-    await (path.points |> List.map mutatePoint |> Random.Extra.combine) <| \newPoints ->
+    await (path.points |> Random.Extra.traverse mutatePoint) <| \newPoints ->
     Random.constant
         { points = newPoints
         }
