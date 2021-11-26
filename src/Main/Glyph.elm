@@ -1,13 +1,8 @@
 module Main.Glyph exposing
-    ( Glyph
-    , Path
-    , Point
+    ( Glyph, Path, Point
+    , init, mutate, setPoint
     , paths
-    , init
-    , view
-    , viewThumbnail
-    , setPoint
-    , mutate
+    , view, viewThumbnail
     )
 
 import Dict exposing (Dict)

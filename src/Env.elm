@@ -1,6 +1,4 @@
-module Env exposing
-    ( ..
-    )
+module Env exposing (..)
 
 dummyConfigItem =
     ""

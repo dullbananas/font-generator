@@ -1,6 +1,4 @@
-module Types exposing
-    ( ..
-    )
+module Types exposing (..)
 
 import Bridge
 import Browser

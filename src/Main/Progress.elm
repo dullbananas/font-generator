@@ -1,9 +1,7 @@
 module Main.Progress exposing
     ( Progress
-    , init
+    , init, submitTime, nextGlyph
     , getCurrentGlyph
-    , submitTime
-    , nextGlyph
     )
 
 import Dict exposing (Dict)
