@@ -23,7 +23,8 @@ type alias Internals =
     }
 
 type alias Path =
-    List Point
+    { points : List Point
+    }
 
 type alias Point =
     { x : Float
@@ -38,10 +39,27 @@ paths (Glyph glyph) =
 
 mutate : Glyph -> Random.Generator Glyph
 mutate (Glyph glyph) =
-    glyph.paths
-    |> List.map (List.map mutatePoint >> Random.Extra.combine)
-    |> Random.Extra.combine
-    |> Random.map (Internals >> Glyph)
+    let
+        await =
+            Util.awaitGenerator
+    in
+    await (glyph.paths |> List.map mutatePath |> Random.Extra.combine) <| \newPaths ->
+    Random.constant
+        ( Glyph
+            { paths = newPaths
+            }
+        )
+
+mutatePath : Path -> Random.Generator Path
+mutatePath path =
+    let
+        await =
+            Util.awaitGenerator
+    in
+    await (path.points |> List.map mutatePoint |> Random.Extra.combine) <| \newPoints ->
+    Random.constant
+        { points = newPoints
+        }
 
 mutatePoint : Point -> Random.Generator Point
 mutatePoint point =
@@ -74,10 +92,12 @@ init =
 initPath : Path
 initPath =
     -- x, y (flipped), radians, curviness
-    [ Point 0 -8 (Basics.degrees 90) 4
-    , Point 8 0 (Basics.degrees 180) 4
-    , Point -8 0 (Basics.degrees 0) 4
-    ]
+    { points =
+        [ Point 0 -8 (Basics.degrees 90) 4
+        , Point 8 0 (Basics.degrees 180) 4
+        , Point -8 0 (Basics.degrees 0) 4
+        ]
+    }
 
 view : Maybe (Char, Glyph) -> Html msg
 view maybe =
@@ -117,7 +137,13 @@ setPoint pathId pointId point (Glyph glyph) =
             glyph.paths
             |> List.Extra.updateAt
                 pathId
-                (List.Extra.setAt pointId point)
+                (\path ->
+                    { path
+                    | points =
+                        path.points
+                        |> List.Extra.setAt pointId point
+                    }
+                )
         }
 
 viewEditor : Point -> Glyph -> Html msg
@@ -149,14 +175,14 @@ toSvg transform (Glyph glyph) =
 
 pathToSegments : Path -> List SvgPath.Segment
 pathToSegments path =
-    case path of
+    case path.points of
         point1 :: pointN ->
             List.concat
                 -- First point
                 [ [SvgPath.M (point1.x, point1.y)]
 
                 -- Points and curves in between
-                , List.map pairToSegment (toPairs path)
+                , List.map pairToSegment (toPairs path.points)
 
                 -- THE END
                 , [SvgPath.Z]

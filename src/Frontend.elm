@@ -134,7 +134,7 @@ viewGlyphEdit char glyph =
     |> Glyph.paths
     |> List.indexedMap
         (\pathId path ->
-            path
+            path.points
             |> List.indexedMap (Html.Lazy.lazy2 (viewPointEdit char pathId))
             --|> List.concat
         )
