@@ -16,7 +16,7 @@ import Url exposing (Url)
 type alias BackendModel =
     { progress : Dict Int Progress
     , seed : Random.Seed
-    , newGlyphs : Dict Lamdera.SessionId Glyph.Family
+    , newGlyphs : Dict Lamdera.SessionId (Dict Char Glyph)
     }
 
 type alias FrontendModel =
@@ -24,7 +24,7 @@ type alias FrontendModel =
     , navigationKey : Browser.Navigation.Key
     , startTime : Time.Posix
     , currentGlyph : Maybe (Char, Glyph)
-    , newGlyphs : Glyph.Family
+    , newGlyphs : Dict Char Glyph
     , newChar : String
     }
 

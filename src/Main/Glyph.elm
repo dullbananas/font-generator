@@ -2,7 +2,6 @@ module Main.Glyph exposing
     ( Glyph
     , Path
     , Point
-    , Family
     , paths
     , init
     , view
@@ -38,14 +37,11 @@ type alias Point =
     , curviness : Float
     }
 
-type alias Family =
-    Dict Char Glyph
-
 paths : Glyph -> List Path
 paths (Glyph glyph) =
     glyph.paths
 
-mutateFamily : Family -> Random.Generator Family
+mutateFamily : Dict Char Glyph -> Random.Generator (Dict Char Glyph)
 mutateFamily glyphs =
     glyphs
     |> Dict.toList

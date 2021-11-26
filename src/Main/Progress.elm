@@ -26,7 +26,7 @@ type alias Internals =
     }
 
 type alias Parent =
-    { glyphs : Glyph.Family
+    { glyphs : Dict Char Glyph
     , scores : Dict Char Float
     }
 
@@ -115,7 +115,7 @@ nextGlyph clientId (Progress progress) =
         )
     |> Random.map Progress
 
-init : Glyph.Family -> Random.Generator Progress
+init : Dict Char Glyph -> Random.Generator Progress
 init glyphs =
     let
         parent =
