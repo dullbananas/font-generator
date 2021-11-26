@@ -7,7 +7,6 @@ module Main.Glyph exposing
     , view
     , viewThumbnail
     , setPoint
-    , mutateFamily
     , mutate
     )
 
@@ -40,19 +39,6 @@ type alias Point =
 paths : Glyph -> List Path
 paths (Glyph glyph) =
     glyph.paths
-
-mutateFamily : Dict Char Glyph -> Random.Generator (Dict Char Glyph)
-mutateFamily glyphs =
-    glyphs
-    |> Dict.toList
-    |> List.map
-        (\(char, glyph) ->
-            Random.pair
-                (Random.constant char)
-                (mutate glyph)
-        )
-    |> Random.Extra.combine
-    |> Random.map Dict.fromList
 
 mutate : Glyph -> Random.Generator Glyph
 mutate (Glyph glyph) =

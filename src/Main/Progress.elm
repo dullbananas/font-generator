@@ -139,6 +139,12 @@ getCurrentGlyph clientId (Progress progress) =
 mutateParent : Parent -> Random.Generator (List (Char, Glyph))
 mutateParent parent =
     parent.glyphs
-    |> Glyph.mutateFamily
-    |> Random.map Dict.toList
+    |> Dict.toList
+    |> List.map
+        (\(char, glyph) ->
+            Random.pair
+                (Random.constant char)
+                (Glyph.mutate glyph)
+        )
+    |> Random.Extra.combine
     |> Random.andThen Random.List.shuffle
