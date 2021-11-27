@@ -19,8 +19,8 @@ type Progress
 type alias Internals =
     { parentHistory : List Parent
     , nextParent : Parent
-    , remainingGlyphs : List (Char, Glyph)
-    , currentGlyphs : Dict Lamdera.ClientId (Char, Glyph)
+    , remainingGlyphs : List Glyph
+    , currentGlyphs : Dict Lamdera.ClientId Glyph
     , name : String
     }
 
@@ -29,9 +29,12 @@ type alias Parent =
     , scores : Dict Char Float
     }
 
-parentSubmitTime : (Char, Glyph) -> Float -> Parent -> Parent
-parentSubmitTime (char, glyph) time parent =
+parentSubmitTime : Glyph -> Float -> Parent -> Parent
+parentSubmitTime glyph time parent =
     let
+        char =
+            Glyph.char glyph
+
         changedParent =
             { parent
 
@@ -114,12 +117,16 @@ nextGlyph clientId (Progress progress) =
         )
     |> Random.map Progress
 
-init : Dict Char Glyph -> Random.Generator Progress
+init : List Glyph -> Random.Generator Progress
 init glyphs =
     let
         parent =
-            { glyphs = glyphs
-            , scores = Dict.empty
+            { glyphs =
+                glyphs
+                |> List.map (\glyph -> (Glyph.char glyph, glyph))
+                |> Dict.fromList
+            , scores =
+                Dict.empty
             }
 
         await =
@@ -136,19 +143,14 @@ init glyphs =
             }
         )
 
-getCurrentGlyph : Lamdera.ClientId -> Progress -> Maybe (Char, Glyph)
+getCurrentGlyph : Lamdera.ClientId -> Progress -> Maybe Glyph
 getCurrentGlyph clientId (Progress progress) =
     progress.currentGlyphs
     |> Dict.get clientId
 
-mutateParent : Parent -> Random.Generator (List (Char, Glyph))
+mutateParent : Parent -> Random.Generator (List Glyph)
 mutateParent parent =
     parent.glyphs
-    |> Dict.toList
-    |> Random.Extra.traverse
-        (\(char, glyph) ->
-            Random.pair
-                (Random.constant char)
-                (Glyph.mutate glyph)
-        )
+    |> Dict.values
+    |> Random.Extra.traverse Glyph.mutate
     |> Random.andThen Random.List.shuffle

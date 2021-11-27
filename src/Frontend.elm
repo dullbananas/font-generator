@@ -60,12 +60,16 @@ view model =
                 ]
 
             Route.Test id ->
-                [ [Glyph.view model.currentGlyph]
-                    |> Html.div
-                        [ Attribute.style "display" "flex"
-                        , Attribute.style "flex-direction" "row"
-                        , Attribute.style "align-content" "center"
-                        ]
+                [ Html.div
+                    [ Attribute.style "display" "flex"
+                    , Attribute.style "flex-direction" "row"
+                    , Attribute.style "align-content" "center"
+                    ]
+                    [ Glyph.view
+                        { height = 32
+                        }
+                        model.currentGlyph
+                    ]
                 , Html.input
                     [ Attribute.style "width" "100%"
                     , Attribute.style "height" "64px"
@@ -85,7 +89,10 @@ view model =
                                 [ Attribute.style "margin-right" "32px"
                                 , Attribute.href ("/new/" ++ String.fromChar c)
                                 ]
-                                [ Glyph.viewThumbnail (Dict.get c model.newGlyphs)
+                                [ Glyph.view
+                                    { height = 24
+                                    }
+                                    (Dict.get c model.newGlyphs)
                                 ]
                         )
                     |> Html.div
@@ -214,7 +221,7 @@ update msg model =
             |> updateNewGlyphs
                 (model.newChar
                     |> String.toList
-                    |> List.map (\char -> (char, Glyph.init))
+                    |> List.map (\char -> (char, Glyph.init char))
                     |> Dict.fromList
                 )
 
@@ -245,7 +252,7 @@ update msg model =
 
         TextChange id string ->
             case (==)
-                (model.currentGlyph |> Maybe.map Tuple.first)
+                (model.currentGlyph |> Maybe.map Glyph.char)
                 (String.uncons string |> Maybe.map Tuple.first)
             of
                 False ->

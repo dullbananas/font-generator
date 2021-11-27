@@ -1,11 +1,10 @@
 module Main.Glyph exposing
     ( Glyph, Path, Point
+    , paths, char
     , init, mutate, setPoint
-    , paths
-    , view, viewThumbnail
+    , Appearance, view
     )
 
-import Dict exposing (Dict)
 import Html exposing (Html)
 import List.Extra
 import Main.Util as Util
@@ -20,6 +19,7 @@ type Glyph
 
 type alias Internals =
     { paths : List Path
+    , char : Char
     }
 
 type alias Path =
@@ -37,6 +37,27 @@ paths : Glyph -> List Path
 paths (Glyph glyph) =
     glyph.paths
 
+char : Glyph -> Char
+char (Glyph glyph) =
+    glyph.char
+
+init : Char -> Glyph
+init newChar =
+    Glyph
+        { paths = [initPath]
+        , char = newChar
+        }
+
+initPath : Path
+initPath =
+    -- x, y (flipped), radians, curviness
+    { points =
+        [ Point 16 8 (Basics.degrees 90) 4
+        , Point 24 16 (Basics.degrees 180) 4
+        , Point 8 16 (Basics.degrees 0) 4
+        ]
+    }
+
 mutate : Glyph -> Random.Generator Glyph
 mutate (Glyph glyph) =
     let
@@ -46,7 +67,8 @@ mutate (Glyph glyph) =
     await (glyph.paths |> Random.Extra.traverse mutatePath) <| \newPaths ->
     Random.constant
         ( Glyph
-            { paths = newPaths
+            { glyph
+            | paths = newPaths
             }
         )
 
@@ -83,52 +105,6 @@ mutateFloat scale num =
     Random.float -scale scale
     |> Random.map ( \delta -> num + (delta^3) )
 
-init : Glyph
-init =
-    Glyph
-        { paths = [initPath]
-        }
-
-initPath : Path
-initPath =
-    -- x, y (flipped), radians, curviness
-    { points =
-        [ Point 0 -8 (Basics.degrees 90) 4
-        , Point 8 0 (Basics.degrees 180) 4
-        , Point -8 0 (Basics.degrees 0) 4
-        ]
-    }
-
-view : Maybe (Char, Glyph) -> Html msg
-view maybe =
-    case maybe of
-        Just (_, glyph) ->
-            Svg.svg
-                -- Width and height are 32
-                -- Coorditates are from -16 to 16 starting from top-left
-                [ SvgA.viewBox "-16 -16 32 32"
-                , SvgA.width "32"
-                ]
-                [ toSvg "" glyph
-                ]
-
-        _ ->
-            Html.text ""
-
-viewThumbnail : Maybe Glyph -> Html msg
-viewThumbnail maybe =
-    case maybe of
-        Just glyph ->
-            Svg.svg
-                [ SvgA.viewBox "-16 -16 32 32"
-                , SvgA.width "24"
-                ]
-                [ toSvg "" glyph
-                ]
-
-        _ ->
-            Html.text ""
-
 setPoint : Int -> Int -> Point -> Glyph -> Glyph
 setPoint pathId pointId point (Glyph glyph) =
     Glyph
@@ -146,32 +122,31 @@ setPoint pathId pointId point (Glyph glyph) =
                 )
         }
 
-viewEditor : Point -> Glyph -> Html msg
-viewEditor point glyph =
-    Svg.svg
-        [ SvgA.viewBox "-16 -16 32 32"
-        , SvgA.width "128"
-        ]
-        [ toSvg "" glyph
-        , Svg.circle
-            [ SvgA.r "0.5"
-            , SvgA.cx (String.fromFloat point.x)
-            , SvgA.cy (String.fromFloat point.y)
-            , SvgA.stroke "#CC0000"
-            , SvgA.strokeWidth "0.2"
-            ]
-            []
-        ]
+type alias Appearance =
+    { height : Float
+    }
 
-toSvg : String -> Glyph -> Svg msg
-toSvg transform (Glyph glyph) =
-    Svg.path
-        [ SvgA.transform transform
-        , SvgA.fillRule "evenodd"
-        , SvgA.d <| SvgPath.pathD <|
-            List.concatMap pathToSegments glyph.paths
-        ]
-        []
+view : Appearance -> Maybe Glyph -> Html msg
+view appearance maybeGlyph =
+    case maybeGlyph of
+        Just (Glyph glyph) ->
+            Svg.svg
+                [ SvgA.viewBox "0 0 32 32"
+                    -- Coordinates start from the top-left at (0, 0)
+                    -- Width and height of the coordinate space is 32
+                , SvgA.height (String.fromFloat appearance.height)
+                    -- Scale to appearance.height
+                ]
+                [ Svg.path
+                    [ SvgA.d <| SvgPath.pathD <|
+                        List.concatMap pathToSegments glyph.paths
+                    , SvgA.fillRule "evenodd"
+                    ]
+                    []
+                ]
+
+        Nothing ->
+            Html.text ""
 
 pathToSegments : Path -> List SvgPath.Segment
 pathToSegments path =
@@ -205,7 +180,7 @@ curveControlPoint scale {curviness, radians, x, y} =
         n =
             scale * curviness
     in
-    -- sin and cos are swapped for unknown reason
+    -- sin and cos are swapped to change the direction
     ( x + (n * sin radians)
     -- SVG coordinates start at the top, so subtract to go up
     , y - (n * cos radians)

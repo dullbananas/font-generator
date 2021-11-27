@@ -21,7 +21,7 @@ type alias FrontendModel =
     { url : Url
     , navigationKey : Browser.Navigation.Key
     , startTime : Time.Posix
-    , currentGlyph : Maybe (Char, Glyph)
+    , currentGlyph : Maybe Glyph
     , newGlyphs : Dict Char Glyph
     , newChar : String
     }
@@ -46,4 +46,4 @@ type BackendMsg
     = N
 
 type ToFrontend
-    = GlyphChange (Char, Glyph)
+    = GlyphChange Glyph
