@@ -39,7 +39,7 @@ app =
 
 init : Url -> Browser.Navigation.Key -> (Model, Cmd Msg)
 init url navigationKey =
-    Tuple.pair
+    (
         { url = url
         , navigationKey = navigationKey
         , startTime = Time.millisToPosix 0
@@ -47,7 +47,9 @@ init url navigationKey =
         , newGlyphs = Dict.empty
         , newChar = ""
         }
+    ,
         Cmd.none
+    )
 
 view : Model -> Browser.Document Msg
 view model =
@@ -81,24 +83,35 @@ view model =
                 ]
 
             Route.NewGlyphs char ->
-                [ model.newGlyphs
-                    |> Dict.keys
-                    |> List.map
-                        (\c ->
-                            Html.a
-                                [ Attribute.style "margin-right" "32px"
-                                , Attribute.href ("/new/" ++ String.fromChar c)
-                                ]
-                                [ Glyph.view
-                                    { height = 24
-                                    }
-                                    (Dict.get c model.newGlyphs)
-                                ]
-                        )
-                    |> Html.div
-                        [ Attribute.style "font-size" "32px"
-                        , Attribute.style "color" "#000000"
-                        ]
+                let
+                    thumbnails =
+                        model.newGlyphs
+                        |> Dict.values
+                        |> List.map viewThumbnail
+
+                    columnHeadings =
+                        List.map (\title -> Html.th [] [ Html.text title ])
+                            [ "path"
+                            , "point"
+                            , "x"
+                            , "y"
+                            , "radians/pi"
+                            , "curviness"
+                            ]
+
+                    tableRows =
+                        case Dict.get char model.newGlyphs of
+                            Just glyph ->
+                                viewGlyphEdit glyph
+
+                            _ ->
+                                []
+                in
+                [ Html.div
+                    [ Attribute.style "font-size" "32px"
+                    , Attribute.style "color" "#000000"
+                    ]
+                    thumbnails
                 , Html.form
                     [ Event.onSubmit NewCharSubmit
                     ]
@@ -114,36 +127,44 @@ view model =
                         []
                     ]
                 , Html.hr [] []
-                , model.newGlyphs
-                    |> Dict.get char
-                    |> Maybe.map (viewGlyphEdit char)
-                    |> Maybe.withDefault []
-                    |> (::)
-                        ( Html.tr
-                            []
-                            (List.map (\text -> Html.th [] [Html.text text])
-                                [ "path"
-                                , "point"
-                                , "x"
-                                , "y"
-                                , "radians/pi"
-                                , "curviness"
-                                ]
-                            )
-                        )
-                    |> Html.table []
+                , Html.table
+                    []
+                    (Html.tr [] columnHeadings :: tableRows)
                 ]
     }
 
-viewGlyphEdit : Char -> Glyph -> List (Html Msg)
-viewGlyphEdit char glyph =
+viewThumbnail : Glyph -> Html Msg
+viewThumbnail glyph =
+    let
+        slug =
+            glyph
+            |> Glyph.char
+            |> String.fromChar
+    in
+    Html.a
+        [ Attribute.style "margin-right" "32px"
+        , Attribute.href ("/new/" ++ slug)
+        ]
+        [ Glyph.view
+            { height = 24
+            }
+            (Just glyph)
+        ]
+
+viewGlyphEdit : Glyph -> List (Html Msg)
+viewGlyphEdit glyph =
+    let
+        pointRow : Int -> (Int -> Glyph.Point -> Html Msg)
+        pointRow pathId =
+            viewPointEdit (Glyph.char glyph) pathId
+            |> Html.Lazy.lazy2
+    in
     glyph
     |> Glyph.paths
     |> List.indexedMap
         (\pathId path ->
             path.points
-            |> List.indexedMap (Html.Lazy.lazy2 (viewPointEdit char pathId))
-            --|> List.concat
+            |> List.indexedMap (pointRow pathId)
         )
     |> List.concat
 
