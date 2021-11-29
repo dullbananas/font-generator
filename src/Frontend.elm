@@ -130,6 +130,11 @@ view model =
                 , Html.table
                     []
                     (Html.tr [] columnHeadings :: tableRows)
+                , Html.button
+                    [ Event.onClick (PathAdd char)
+                    ]
+                    [ Html.text "Add path"
+                    ]
                 ]
     }
 
@@ -244,6 +249,21 @@ update msg model =
                     |> String.toList
                     |> List.map (\char -> (char, Glyph.init char))
                     |> Dict.fromList
+                )
+
+        PathAdd char ->
+            model
+            |> updateNewGlyphs
+                (case Dict.get char model.newGlyphs of
+                    Just glyph ->
+                        Dict.empty
+                        |> Dict.insert char
+                            ( glyph
+                                |> Glyph.addPath
+                            )
+
+                    Nothing ->
+                        Dict.empty
                 )
 
         PointChange char pathId pointId point ->

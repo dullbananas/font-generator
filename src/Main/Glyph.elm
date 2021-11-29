@@ -1,7 +1,7 @@
 module Main.Glyph exposing
     ( Glyph, Path, Point
     , paths, char
-    , init, mutate, setPoint
+    , init, mutate, addPath, setPoint
     , Appearance, view
     )
 
@@ -71,6 +71,14 @@ mutate (Glyph glyph) =
             | paths = newPaths
             }
         )
+
+addPath : Glyph -> Glyph
+addPath (Glyph glyph) =
+    ( Glyph
+        { glyph
+        | paths = glyph.paths ++ [ initPath ]
+        }
+    )
 
 mutatePath : Path -> Random.Generator Path
 mutatePath path =

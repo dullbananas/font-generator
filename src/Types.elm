@@ -31,7 +31,7 @@ type FrontendMsg
     | UrlChange Url
     | NewCharChange String
     | NewCharSubmit
-    --| PathAdd Char
+    | PathAdd Char
     --| PointAdd Char Int
     | PointChange Char Int Int Glyph.Point
     | TextFocus
