@@ -13,7 +13,7 @@ import Html.Attributes as Attribute
 import Html.Events as Event
 import Html.Lazy
 import Lamdera
-import Main.Glyph as Glyph exposing (Glyph)
+import Main.Glyph as Glyph exposing (Glyph, initAppearance)
 import Main.Route as Route exposing (Route)
 import Task
 import Time
@@ -68,7 +68,8 @@ view model =
                     , Attribute.style "align-content" "center"
                     ]
                     [ Glyph.view
-                        { height = 32
+                        { initAppearance
+                        | height = 32
                         }
                         model.currentGlyph
                     ]
@@ -127,6 +128,12 @@ view model =
                         []
                     ]
                 , Html.hr [] []
+                , Glyph.view
+                    { initAppearance
+                    | height = 512
+                    , grid = True
+                    }
+                    (Dict.get char model.newGlyphs)
                 , Html.table
                     []
                     (Html.tr [] columnHeadings :: tableRows)
@@ -151,7 +158,8 @@ viewThumbnail glyph =
         , Attribute.href ("/new/" ++ slug)
         ]
         [ Glyph.view
-            { height = 24
+            { initAppearance
+            | height = 24
             }
             (Just glyph)
         ]

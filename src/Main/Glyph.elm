@@ -2,7 +2,7 @@ module Main.Glyph exposing
     ( Glyph, Path, Point
     , paths, char
     , init, mutate, addPath, setPoint
-    , Appearance, view
+    , Appearance, initAppearance, view
     )
 
 import Html exposing (Html)
@@ -132,6 +132,13 @@ setPoint pathId pointId point (Glyph glyph) =
 
 type alias Appearance =
     { height : Float
+    , grid : Bool
+    }
+
+initAppearance : Appearance
+initAppearance =
+    { height = 32
+    , grid = False
     }
 
 view : Appearance -> Maybe Glyph -> Html msg
@@ -145,7 +152,31 @@ view appearance maybeGlyph =
                 , SvgA.height (String.fromFloat appearance.height)
                     -- Scale to appearance.height
                 ]
-                [ Svg.path
+                [ case appearance.grid of
+                    True ->
+                        Svg.g
+                            [ SvgA.stroke "#cccccc"
+                            , SvgA.strokeWidth "0.1"
+                            ]
+                            (List.concat
+                                [ gridLines
+                                    (\n ->
+                                        ( ( n, 0 )
+                                        , ( n, 32 )
+                                        )
+                                    )
+                                , gridLines
+                                    (\n ->
+                                        ( ( 0, n )
+                                        , ( 32, n )
+                                        )
+                                    )
+                                ]
+                            )
+
+                    False ->
+                        Html.text ""
+                , Svg.path
                     [ SvgA.d <| SvgPath.pathD <|
                         List.concatMap pathToSegments glyph.paths
                     , SvgA.fillRule "evenodd"
@@ -155,6 +186,24 @@ view appearance maybeGlyph =
 
         Nothing ->
             Html.text ""
+
+gridLines : (Int -> ((Int, Int), (Int, Int))) -> List (Svg msg)
+gridLines stepToPoints =
+    List.range 0 8
+    |> List.map
+        (\step ->
+            let
+                ((x1, y1), (x2, y2)) =
+                    stepToPoints (step * 4)
+            in
+                Svg.line
+                    [ SvgA.x1 (String.fromInt x1)
+                    , SvgA.y1 (String.fromInt y1)
+                    , SvgA.x2 (String.fromInt x2)
+                    , SvgA.y2 (String.fromInt y2)
+                    ]
+                    []
+        )
 
 pathToSegments : Path -> List SvgPath.Segment
 pathToSegments path =
