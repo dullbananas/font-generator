@@ -212,7 +212,17 @@ viewPointEdit char pathId pointId point =
                 .y
             , numInput
                 (\n -> {point | radians = n * Basics.pi})
-                (.radians >> (\n -> n / Basics.pi))
+                (.radians >>
+                    (\n ->
+                        (n / Basics.pi)
+                        -- Prevent precision errors with floats
+                        -- otherwise you type 11 and see 10.999
+                        |> (*) 360
+                        |> Basics.round
+                        |> Basics.toFloat
+                        |> (\n_ -> n_ / 360)
+                    )
+                )
             , numInput
                 (\n -> {point | curviness = n})
                 .curviness
