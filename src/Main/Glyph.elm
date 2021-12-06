@@ -1,7 +1,7 @@
 module Main.Glyph exposing
     ( Glyph, Path, Point
     , paths, char
-    , init, mutate, addPath, setPoint
+    , init, mutate, addPath, addPoint, setPoint
     , Appearance, initAppearance, view
     )
 
@@ -58,6 +58,14 @@ initPath =
         ]
     }
 
+initPoint : Point
+initPoint =
+    { x = 0
+    , y = 0
+    , radians = 0
+    , curviness = 1
+    }
+
 mutate : Glyph -> Random.Generator Glyph
 mutate (Glyph glyph) =
     let
@@ -77,6 +85,22 @@ addPath (Glyph glyph) =
     ( Glyph
         { glyph
         | paths = glyph.paths ++ [ initPath ]
+        }
+    )
+
+addPoint : Int -> Glyph -> Glyph
+addPoint pathId (Glyph glyph) =
+    ( Glyph
+        { glyph
+        | paths =
+            glyph.paths
+            |> List.Extra.updateAt
+                pathId
+                (\path ->
+                    { path
+                    | points = path.points ++ [ initPoint ]
+                    }
+                )
         }
     )
 

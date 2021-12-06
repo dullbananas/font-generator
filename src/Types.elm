@@ -32,7 +32,7 @@ type FrontendMsg
     | NewCharChange String
     | NewCharSubmit
     | PathAdd Char
-    --| PointAdd Char Int
+    | PointAdd Char Int
     | PointChange Char Int Int Glyph.Point
     | TextFocus
     | StartTimeChange Time.Posix

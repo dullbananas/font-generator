@@ -176,8 +176,31 @@ viewGlyphEdit glyph =
     |> Glyph.paths
     |> List.indexedMap
         (\pathId path ->
-            path.points
-            |> List.indexedMap (pointRow pathId)
+            let
+                existingPoints =
+                    path.points
+                    |> List.indexedMap (pointRow pathId)
+
+                newPoint =
+                    Html.tr
+                        []
+                        [ Html.td
+                            []
+                            [ Html.text (String.fromInt pathId)
+                            ]
+                        , Html.td
+                            []
+                            [ Html.button
+                                [ Event.onClick <| PointAdd
+                                    (Glyph.char glyph)
+                                    pathId
+                                ]
+                                [ Html.text "Add point"
+                                ]
+                            ]
+                        ]
+            in
+            existingPoints ++ [ newPoint ]
         )
     |> List.concat
 
@@ -278,6 +301,21 @@ update msg model =
                         |> Dict.insert char
                             ( glyph
                                 |> Glyph.addPath
+                            )
+
+                    Nothing ->
+                        Dict.empty
+                )
+
+        PointAdd char pathId ->
+            model
+            |> updateNewGlyphs
+                (case Dict.get char model.newGlyphs of
+                    Just glyph ->
+                        Dict.empty
+                        |> Dict.insert char
+                            ( glyph
+                                |> Glyph.addPoint pathId
                             )
 
                     Nothing ->
