@@ -361,22 +361,13 @@ update msg model =
                 )
             )
 
-updateNewGlyphs : Dict Char Glyph -> Model -> (Model, Cmd Msg)
-updateNewGlyphs newItems model =
-    Tuple.pair
-        { model
-        | newGlyphs =
-            model.newGlyphs
-            |> Dict.union newItems
-        }
-        (Lamdera.sendToBackend (NewGlyphsSave newItems))
-
 updateGlyph : (Maybe Glyph -> Maybe Glyph) -> Char -> Model -> (Model, Cmd Msg)
 updateGlyph f char model =
     case f (Dict.get char model.newGlyphs) of
         Just newGlyph ->
-            model
-            |> updateNewGlyphs (Dict.singleton char newGlyph)
+            ( { model | newGlyphs = model.newGlyphs |> Dict.insert char newGlyph }
+            , Lamdera.sendToBackend (NewGlyphSave newGlyph)
+            )
 
         Nothing ->
             (model, Cmd.none)

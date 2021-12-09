@@ -5,6 +5,7 @@ module Backend exposing
 import Bridge exposing (ToBackend(..))
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
+import Main.Glyph as Glyph exposing (Glyph)
 import Main.Progress as Progress exposing (Progress)
 import Random
 import Types exposing (BackendMsg(..), ToFrontend(..))
@@ -40,7 +41,7 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd Msg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
-        NewGlyphsSave newItems ->
+        NewGlyphSave glyph ->
             Tuple.pair
                 { model
                 | newGlyphs =
@@ -49,7 +50,7 @@ updateFromFrontend sessionId clientId msg model =
                         (\dict ->
                             dict
                             |> Maybe.withDefault Dict.empty
-                            |> Dict.union newItems
+                            |> Dict.insert (Glyph.char glyph) glyph
                             |> Just
                         )
                 }
