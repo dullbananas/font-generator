@@ -45,7 +45,7 @@ init url navigationKey =
         , startTime = Time.millisToPosix 0
         , currentGlyph = Nothing
         , newGlyphs = Dict.empty
-        , newChar = ""
+        , newChar = Nothing
         }
     ,
         Cmd.none
@@ -118,12 +118,18 @@ view model =
                     ]
                     [ Html.input
                         [ Event.onInput NewCharChange
-                        , Attribute.value model.newChar
+                        , Attribute.value <|
+                            case model.newChar of
+                                Just charValue ->
+                                    String.fromChar charValue
+
+                                Nothing ->
+                                    ""
                         ]
                         []
                     , Html.input
                         [ Attribute.type_ "submit"
-                        , Attribute.value "Add characters"
+                        , Attribute.value "Add character"
                         ]
                         []
                     ]
@@ -279,30 +285,44 @@ update msg model =
             )
 
         NewCharChange newChar ->
-            ( { model | newChar = newChar }
-            , Cmd.none
+            (
+                { model
+                | newChar =
+                    String.uncons newChar
+                    |> Maybe.map Tuple.first
+                }
+            ,
+                Cmd.none
             )
 
         NewCharSubmit ->
-            { model | newChar = "" }
-            |> updateNewGlyphs
-                (model.newChar
-                    |> String.toList
-                    |> List.map (\char -> (char, Glyph.init char))
-                    |> Dict.fromList
-                )
+            case model.newChar of
+                Just char ->
+                    { model | newChar = Nothing }
+                    |> updateGlyph
+                        (Maybe.withDefault (Glyph.init char) >> Just)
+                        char
+
+                Nothing ->
+                    (model, Cmd.none)
 
         PathAdd char ->
             model
-            |> updateGlyph Glyph.addPath char
+            |> updateGlyph
+                (Maybe.map Glyph.addPath)
+                char
 
         PointAdd char pathId ->
             model
-            |> updateGlyph (Glyph.addPoint pathId) char
+            |> updateGlyph
+                (Maybe.map (Glyph.addPoint pathId))
+                char
 
         PointChange char pathId pointId point ->
             model
-            |> updateGlyph (Glyph.setPoint pathId pointId point) char
+            |> updateGlyph
+                (Maybe.map (Glyph.setPoint pathId pointId point))
+                char
 
         TextFocus ->
             ( model
@@ -351,19 +371,15 @@ updateNewGlyphs newItems model =
         }
         (Lamdera.sendToBackend (NewGlyphsSave newItems))
 
-updateGlyph : (Glyph -> Glyph) -> Char -> Model -> (Model, Cmd Msg)
+updateGlyph : (Maybe Glyph -> Maybe Glyph) -> Char -> Model -> (Model, Cmd Msg)
 updateGlyph f char model =
-    model
-    |> updateNewGlyphs
-        (case Dict.get char model.newGlyphs of
-            Just glyph ->
-                Dict.empty
-                |> Dict.insert char (f glyph)
+    case f (Dict.get char model.newGlyphs) of
+        Just newGlyph ->
+            model
+            |> updateNewGlyphs (Dict.singleton char newGlyph)
 
-            Nothing ->
-                Dict.empty
-        )
-
+        Nothing ->
+            (model, Cmd.none)
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd Msg )
 updateFromBackend msg model =

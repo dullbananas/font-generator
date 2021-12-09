@@ -23,7 +23,7 @@ type alias FrontendModel =
     , startTime : Time.Posix
     , currentGlyph : Maybe Glyph
     , newGlyphs : Dict Char Glyph
-    , newChar : String
+    , newChar : Maybe Char
     }
 
 type FrontendMsg
