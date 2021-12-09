@@ -294,48 +294,15 @@ update msg model =
 
         PathAdd char ->
             model
-            |> updateNewGlyphs
-                (case Dict.get char model.newGlyphs of
-                    Just glyph ->
-                        Dict.empty
-                        |> Dict.insert char
-                            ( glyph
-                                |> Glyph.addPath
-                            )
-
-                    Nothing ->
-                        Dict.empty
-                )
+            |> updateGlyph Glyph.addPath char
 
         PointAdd char pathId ->
             model
-            |> updateNewGlyphs
-                (case Dict.get char model.newGlyphs of
-                    Just glyph ->
-                        Dict.empty
-                        |> Dict.insert char
-                            ( glyph
-                                |> Glyph.addPoint pathId
-                            )
-
-                    Nothing ->
-                        Dict.empty
-                )
+            |> updateGlyph (Glyph.addPoint pathId) char
 
         PointChange char pathId pointId point ->
             model
-            |> updateNewGlyphs
-                (case Dict.get char model.newGlyphs of
-                    Just glyph ->
-                        Dict.empty
-                        |> Dict.insert char
-                            ( glyph
-                                |> Glyph.setPoint pathId pointId point
-                            )
-
-                    Nothing ->
-                        Dict.empty
-                )
+            |> updateGlyph (Glyph.setPoint pathId pointId point) char
 
         TextFocus ->
             ( model
@@ -383,6 +350,20 @@ updateNewGlyphs newItems model =
             |> Dict.union newItems
         }
         (Lamdera.sendToBackend (NewGlyphsSave newItems))
+
+updateGlyph : (Glyph -> Glyph) -> Char -> Model -> (Model, Cmd Msg)
+updateGlyph f char model =
+    model
+    |> updateNewGlyphs
+        (case Dict.get char model.newGlyphs of
+            Just glyph ->
+                Dict.empty
+                |> Dict.insert char (f glyph)
+
+            Nothing ->
+                Dict.empty
+        )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd Msg )
 updateFromBackend msg model =
