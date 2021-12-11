@@ -36,7 +36,7 @@ view char model =
         thumbnails =
             model.glyphs
             |> Dict.values
-            |> List.map viewThumbnail
+            |> List.map (viewThumbnail char)
 
         columnHeadings =
             List.map (\title -> Html.th [] [ Html.text title ])
@@ -98,8 +98,8 @@ view char model =
         ]
     ]
 
-viewThumbnail : Glyph -> Html Msg
-viewThumbnail glyph =
+viewThumbnail : Char -> Glyph -> Html Msg
+viewThumbnail currentChar glyph =
     let
         slug =
             glyph
@@ -109,12 +109,21 @@ viewThumbnail glyph =
     Html.a
         [ Attribute.style "margin-right" "32px"
         , Attribute.href ("/new/" ++ slug)
+        , Attribute.style "font-size" "16px"
+        , Attribute.style "border" <|
+            case (==) currentChar (Glyph.char glyph) of
+                True ->
+                    "4px solid #000000"
+
+                False ->
+                    "0px solid #000000"
         ]
         [ Glyph.view
             { initAppearance
             | height = 24
             }
             (Just glyph)
+        , Html.text (String.fromChar (Glyph.char glyph))
         ]
 
 viewGlyphEdit : Glyph -> List (Html Msg)
