@@ -6,6 +6,7 @@ import Browser.Navigation
 import Dict exposing (Dict)
 import Lamdera
 import Main.Glyph as Glyph exposing (Glyph)
+import Main.Page.NewGlyphs as NewGlyphs
 import Main.Progress as Progress exposing (Progress)
 import Random
 import Time
@@ -22,18 +23,13 @@ type alias FrontendModel =
     , navigationKey : Browser.Navigation.Key
     , startTime : Time.Posix
     , currentGlyph : Maybe Glyph
-    , newGlyphs : Dict Char Glyph
-    , newChar : Maybe Char
+    , newGlyphs : NewGlyphs.Model
     }
 
 type FrontendMsg
     = UrlRequest Browser.UrlRequest
     | UrlChange Url
-    | NewCharChange String
-    | NewCharSubmit
-    | PathAdd Char
-    | PointAdd Char Int
-    | PointChange Char Int Int Glyph.Point
+    | NewGlyphsMsg NewGlyphs.Msg
     | TextFocus
     | StartTimeChange Time.Posix
     | TextChange Int String
