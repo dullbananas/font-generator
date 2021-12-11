@@ -6,9 +6,10 @@ import Bridge exposing (ToBackend(..))
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import Main.Glyph as Glyph exposing (Glyph)
+import Main.Page.Test as Test
 import Main.Progress as Progress exposing (Progress)
 import Random
-import Types exposing (BackendMsg(..), ToFrontend(..))
+import Types exposing (BackendMsg(..), ToFrontend(..), FrontendMsg(..))
 
 type alias Model =
     Types.BackendModel
@@ -99,7 +100,10 @@ updateFromFrontend sessionId clientId msg model =
                     |> Maybe.andThen (Progress.getCurrentGlyph clientId)
                 of
                     Just glyph ->
-                        Lamdera.sendToFrontend clientId (GlyphChange glyph)
+                        Lamdera.sendToFrontend clientId
+                            <| ToFrontend
+                            <| TestMsg
+                            <| Test.GlyphChange glyph
 
                     Nothing ->
                         Cmd.none

@@ -8,14 +8,10 @@ import Browser.Dom
 import Browser.Events
 import Browser.Navigation
 import Html exposing (Html)
-import Html.Attributes as Attribute
-import Html.Events as Event
 import Lamdera
-import Main.Glyph as Glyph exposing (Glyph, initAppearance)
 import Main.Page.NewGlyphs as NewGlyphs
+import Main.Page.Test as Test
 import Main.Route as Route exposing (Route)
-import Task
-import Time
 import Types exposing (FrontendMsg(..), ToFrontend(..))
 import Url exposing (Url)
 
@@ -41,8 +37,7 @@ init url navigationKey =
     (
         { url = url
         , navigationKey = navigationKey
-        , startTime = Time.millisToPosix 0
-        , currentGlyph = Nothing
+        , test = Test.init
         , newGlyphs = NewGlyphs.init
         }
     ,
@@ -60,26 +55,9 @@ view model =
                 ]
 
             Route.Test id ->
-                [ Html.div
-                    [ Attribute.style "display" "flex"
-                    , Attribute.style "flex-direction" "row"
-                    , Attribute.style "align-content" "center"
-                    ]
-                    [ Glyph.view
-                        { initAppearance
-                        | height = 32
-                        }
-                        model.currentGlyph
-                    ]
-                , Html.input
-                    [ Attribute.style "width" "100%"
-                    , Attribute.style "height" "64px"
-                    , Event.onFocus TextFocus
-                    , Event.onInput (TextChange id)
-                    , Attribute.value ""
-                    ]
-                    []
-                ]
+                model.test
+                |> Test.view id
+                |> List.map (Html.map TestMsg)
 
             Route.NewGlyphs char ->
                 model.newGlyphs
@@ -120,50 +98,17 @@ update msg model =
                 (\a -> { model | newGlyphs = a })
                 (Cmd.map NewGlyphsMsg)
 
-        TextFocus ->
-            ( model
-            , Task.perform StartTimeChange Time.now
-            )
+        TestMsg subMsg ->
+            model.test
+            |> Test.update subMsg
+            |> Tuple.mapBoth
+                (\a -> { model | test = a })
+                (Cmd.map TestMsg)
 
-        StartTimeChange time ->
-            ( { model | startTime = time }
-            , Cmd.none
-            )
-
-        TextChange id string ->
-            case (==)
-                (model.currentGlyph |> Maybe.map Glyph.char)
-                (String.uncons string |> Maybe.map Tuple.first)
-            of
-                False ->
-                    ( model
-                    , Cmd.none
-                    )
-
-                True ->
-                    ( model
-                    , Task.perform (EndTime id) Time.now
-                    )
-
-        EndTime id endTime ->
-            ( { model | currentGlyph = Nothing }
-            , Lamdera.sendToBackend
-                ( GlyphRequest
-                    id
-                    ( Just <| toFloat <| (-)
-                        (Time.posixToMillis endTime)
-                        (Time.posixToMillis model.startTime)
-                    )
-                )
-            )
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd Msg )
-updateFromBackend msg model =
-    case msg of
-        GlyphChange tuple ->
-            ( { model | currentGlyph = Just tuple }
-            , Task.perform StartTimeChange Time.now
-            )
+updateFromBackend (ToFrontend msg) model =
+    update msg model
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =

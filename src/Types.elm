@@ -7,9 +7,9 @@ import Dict exposing (Dict)
 import Lamdera
 import Main.Glyph as Glyph exposing (Glyph)
 import Main.Page.NewGlyphs as NewGlyphs
+import Main.Page.Test as Test
 import Main.Progress as Progress exposing (Progress)
 import Random
-import Time
 import Url exposing (Url)
 
 type alias BackendModel =
@@ -21,8 +21,7 @@ type alias BackendModel =
 type alias FrontendModel =
     { url : Url
     , navigationKey : Browser.Navigation.Key
-    , startTime : Time.Posix
-    , currentGlyph : Maybe Glyph
+    , test : Test.Model
     , newGlyphs : NewGlyphs.Model
     }
 
@@ -30,10 +29,7 @@ type FrontendMsg
     = UrlRequest Browser.UrlRequest
     | UrlChange Url
     | NewGlyphsMsg NewGlyphs.Msg
-    | TextFocus
-    | StartTimeChange Time.Posix
-    | TextChange Int String
-    | EndTime Int Time.Posix
+    | TestMsg Test.Msg
 
 type alias ToBackend =
     Bridge.ToBackend
@@ -42,4 +38,4 @@ type BackendMsg
     = N
 
 type ToFrontend
-    = GlyphChange Glyph
+    = ToFrontend FrontendMsg
