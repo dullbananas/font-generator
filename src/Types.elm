@@ -28,6 +28,7 @@ type alias FrontendModel =
 type FrontendMsg
     = UrlRequest Browser.UrlRequest
     | UrlChange Url
+    | TestRedirect Int
     | NewGlyphsMsg NewGlyphs.Msg
     | TestMsg Test.Msg
 

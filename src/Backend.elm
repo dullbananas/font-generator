@@ -57,6 +57,42 @@ updateFromFrontend sessionId clientId msg model =
                 }
                 Cmd.none
 
+        ProgressAdd glyphsDict ->
+            let
+                calcNewId counter =
+                    case Dict.member counter model.progress of
+                        True ->
+                            calcNewId (counter + 1)
+
+                        False ->
+                            counter
+
+                newId =
+                    calcNewId (Dict.size model.progress)
+
+                generateProgress =
+                    Progress.init (Dict.values glyphsDict)
+
+                (progress, seed) =
+                    model.seed
+                    |> Random.step generateProgress
+            in
+            (
+                { model
+
+                | progress =
+                    model.progress
+                    |> Dict.insert newId progress
+
+                , seed =
+                    seed
+                }
+            ,
+                Lamdera.sendToFrontend clientId
+                    <| ToFrontend
+                    <| TestRedirect newId
+            )
+
         GlyphRequest id maybeTime ->
             let
                 submitTime =

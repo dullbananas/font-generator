@@ -102,6 +102,13 @@ update msg model =
                     Cmd.none
             )
 
+        TestRedirect id ->
+            ( model
+            , Browser.Navigation.pushUrl
+                model.navigationKey
+                ("/test/" ++ String.fromInt id)
+            )
+
         NewGlyphsMsg subMsg ->
             model.newGlyphs
             |> NewGlyphs.update subMsg

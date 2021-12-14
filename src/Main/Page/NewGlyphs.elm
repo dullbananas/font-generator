@@ -23,6 +23,7 @@ type Msg
     | PathAdd Char
     | PointAdd Char Int
     | PointChange Char Int Int Glyph.Point
+    | EditFinish
 
 init : Model
 init =
@@ -96,6 +97,11 @@ view char model =
         ]
         [ Html.text "Add path"
         ]
+    , Html.hr [] []
+    , Html.button
+        [ Event.onClick EditFinish
+        ]
+        [ Html.text "START TESTING" ]
     ]
 
 viewThumbnail : Char -> Glyph -> Html Msg
@@ -256,6 +262,11 @@ update msg model =
             |> updateGlyph
                 (Maybe.map (Glyph.setPoint pathId pointId point))
                 char
+
+        EditFinish ->
+            ( model
+            , Lamdera.sendToBackend (ProgressAdd model.glyphs)
+            )
 
 updateGlyph : (Maybe Glyph -> Maybe Glyph) -> Char -> Model -> (Model, Cmd Msg)
 updateGlyph f char model =
