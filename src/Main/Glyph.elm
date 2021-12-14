@@ -121,8 +121,8 @@ mutatePoint point =
         await =
             Util.awaitGenerator
     in
-    await (mutateFloat 1 point.x) <| \x ->
-    await (mutateFloat 1 point.y) <| \y ->
+    await (mutateFloat 0.5 point.x) <| \x ->
+    await (mutateFloat 0.5 point.y) <| \y ->
     await (mutateFloat 0.1 point.radians) <| \radians ->
     await (mutateFloat 1 point.curviness) <| \curviness ->
     Random.constant
