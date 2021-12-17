@@ -43,7 +43,9 @@ init url navigationKey =
         , newGlyphs = NewGlyphs.init
         }
     ,
-        Cmd.none
+        Cmd.batch
+            [ Lamdera.sendToBackend NewGlyphsRequest
+            ]
     )
 
 view : Model -> Browser.Document Msg

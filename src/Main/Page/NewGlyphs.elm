@@ -1,6 +1,6 @@
 module Main.Page.NewGlyphs exposing
     ( Model, init, view
-    , Msg, update
+    , Msg(..), update
     )
 
 import Bridge exposing (ToBackend(..))
@@ -24,6 +24,7 @@ type Msg
     | PointAdd Char Int
     | PointChange Char Int Int Glyph.Point
     | EditFinish
+    | GlyphsRestore (Dict Char Glyph)
 
 init : Model
 init =
@@ -266,6 +267,11 @@ update msg model =
         EditFinish ->
             ( model
             , Lamdera.sendToBackend (ProgressAdd model.glyphs)
+            )
+
+        GlyphsRestore glyphs ->
+            ( { model | glyphs = glyphs }
+            , Cmd.none
             )
 
 updateGlyph : (Maybe Glyph -> Maybe Glyph) -> Char -> Model -> (Model, Cmd Msg)

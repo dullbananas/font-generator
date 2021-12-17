@@ -6,6 +6,7 @@ import Bridge exposing (ToBackend(..))
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import Main.Glyph as Glyph exposing (Glyph)
+import Main.Page.NewGlyphs as NewGlyphs
 import Main.Page.Test as Test
 import Main.Progress as Progress exposing (Progress)
 import Random
@@ -42,6 +43,19 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd Msg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
+        NewGlyphsRequest ->
+            ( model
+            , case Dict.get sessionId model.newGlyphs of
+                Just glyphs ->
+                    Lamdera.sendToFrontend clientId
+                        <| ToFrontend
+                        <| NewGlyphsMsg
+                        <| NewGlyphs.GlyphsRestore glyphs
+
+                Nothing ->
+                    Cmd.none
+            )
+
         NewGlyphSave glyph ->
             Tuple.pair
                 { model
