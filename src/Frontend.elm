@@ -14,6 +14,7 @@ import Lamdera
 import Main.Page.NewGlyphs as NewGlyphs
 import Main.Page.Test as Test
 import Main.Route as Route exposing (Route)
+import Task exposing (Task)
 import Types exposing (FrontendMsg(..), ToFrontend(..))
 import Url exposing (Url)
 
@@ -45,6 +46,7 @@ init url navigationKey =
     ,
         Cmd.batch
             [ Lamdera.sendToBackend NewGlyphsRequest
+            , Task.perform UrlChange (Task.succeed url)
             ]
     )
 
