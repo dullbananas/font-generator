@@ -8,8 +8,6 @@ import Browser.Dom
 import Browser.Events
 import Browser.Navigation
 import Html exposing (Html)
-import Html.Attributes as Attribute
-import Html.Events as Event
 import Lamdera
 import Main.Page.NewGlyphs as NewGlyphs
 import Main.Page.Test as Test
@@ -55,15 +53,6 @@ view model =
     { title =
         "Fonts"
     , body =
-        (++)
-            [ Html.input
-                [ Event.onInput (Url.fromString >> Maybe.withDefault model.url >> UrlChange)
-                , Attribute.value (Url.toString model.url)
-                ]
-                []
-            , Html.br [] []
-            ]
-        <|
         case Route.fromUrl model.url of
             Route.NotFound ->
                 [ Html.text "Page not found"
