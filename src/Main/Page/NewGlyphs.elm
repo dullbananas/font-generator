@@ -203,6 +203,16 @@ viewPointEdit char pathId pointId point =
                 (\n -> {point | y = n})
                 .y
             , numInput
+                {-
+                0.00 up
+                0.25
+                0.50 right
+                0.75
+                1.00 down
+                1.25
+                1.50 left
+                1.75
+                -}
                 (\n -> {point | radians = n * Basics.pi})
                 (.radians >>
                     (\n ->
