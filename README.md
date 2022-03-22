@@ -1,1 +1,1 @@
-# font-genetic-algorithm
+# font-generator
