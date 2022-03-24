@@ -1,4 +1,0 @@
-module Env exposing (..)
-
-dummyConfigItem =
-    ""
