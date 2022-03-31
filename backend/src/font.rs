@@ -7,6 +7,8 @@ use shared::id::{Id};
 #[deku(endian = "big")]
 pub struct Font {
     next_version: Id<Version>,
+    #[deku(bits_read = "deku::rest.len()")]
+    remaining_glyphs: Vec<Id<Glyph>>
 }
 
 pub struct Version;
@@ -14,14 +16,16 @@ pub struct Version;
 #[derive(DekuRead, DekuWrite)]
 #[deku(endian = "big")]
 struct VersionItemKey {
-    id: Id<Version>,
-    #[deku(map = "char_map", writer = "char_write(deku::output, char)")]
-    char: char,
+    font_id: Id<Font>,
+    version_id: Id<Version>,
+    #[deku(map = "char_map", writer = "char_write(deku::output, item_char)")]
+    item_char: char,
 }
 
 #[derive(DekuRead, DekuWrite)]
 #[deku(endian = "big")]
 struct VersionItem {
-    score: Option<f64>,
     glyph: Id<Glyph>,
+    #[deku(cond = "deku::rest.len() > 0")]
+    score: Option<f64>,
 }
