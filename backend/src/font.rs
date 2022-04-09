@@ -8,7 +8,7 @@ use shared::id::{Id};
 pub struct Font {
     next_version: Id<Version>,
     #[deku(bits_read = "deku::rest.len()")]
-    remaining_glyphs: Vec<Id<Glyph>>
+    test_queue: Vec<Id<Glyph>>
 }
 
 pub struct Version;

@@ -76,6 +76,8 @@ impl Glyph {
             path.update_point(point_id, f);
         }
     }
+
+    pub fn generate_queue(glyphs: Vec<Glyph>)
 }
 
 impl Path {
