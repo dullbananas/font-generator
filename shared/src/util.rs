@@ -10,3 +10,8 @@ pub fn char_write(output: &mut BitVec<Msb0, u8>, char: &char) -> Result<(), Deku
     u32::from(*char)
         .write(output, ())
 }
+
+// For null-terminated strings
+pub fn is_null(byte: &u8) -> bool {
+    *byte == 0
+}

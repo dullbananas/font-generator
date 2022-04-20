@@ -1,6 +1,7 @@
 mod endpoint;
 mod font;
 mod state;
+mod user;
 mod util;
 
 use crate::state::{State};

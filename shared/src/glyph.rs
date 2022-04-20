@@ -1,21 +1,16 @@
 use crate::util::{char_map, char_write};
 use deku::prelude::*;
 
-#[derive(DekuRead, DekuWrite)]
+#[derive(DekuRead, DekuWrite, Clone)]
 #[deku(endian = "big")]
 pub struct Glyph {
     #[deku(map = "char_map", writer = "char_write(deku::output, char)")]
-        /*map = "|c: u32|
-            char::from_u32(c)
-                .ok_or(DekuError::Parse(\"invalid char\".to_owned()))
-        ",
-        writer = "u32::from(*char).write(deku::output, ())"*/
     char: char,
     #[deku(bits_read = "deku::rest.len()")]
     paths: Vec<Path>,
 }
 
-#[derive(DekuRead, DekuWrite)]
+#[derive(DekuRead, DekuWrite, Clone)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Path {
     #[deku(update = "self.points.len()")]
@@ -24,7 +19,7 @@ pub struct Path {
     points: Vec<Point>,
 }
 
-#[derive(DekuRead, DekuWrite)]
+#[derive(DekuRead, DekuWrite, Clone)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Point {
     x: f64,
@@ -77,7 +72,19 @@ impl Glyph {
         }
     }
 
-    pub fn generate_queue(glyphs: Vec<Glyph>)
+    pub fn generate_variants<Iter, E>(old_glyphs: Iter) -> Result<Vec<Glyph>, E>
+    where
+        Iter: Iterator<Item = Result<Glyph, E>>,
+    {
+        let mut variants = Vec::<Glyph>::new();
+        for glyph_result in old_glyphs {
+            let mut glyph = glyph_result?;
+            glyph.mutate();
+            variants.push(glyph);
+        }
+        fastrand::shuffle(&mut variants);
+        Ok(variants)
+    }
 }
 
 impl Path {
