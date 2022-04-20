@@ -36,13 +36,7 @@ impl State {
         let version_id = self.generate_id::<font::Version>().await?;
         let _: font::Version = self.add_font_version(
             version_id,
-            {
-                let mut glyph_ids = Vec::<Id<Glyph>>::new();
-                for glyph in glyphs.iter() {
-                    glyph_ids.push(self.add_glyph(glyph).await?);
-                }
-                glyph_ids
-            },
+            self.add_glyphs(&glyphs).await?,
         ).await?;
 
         let font_id = self.generate_id::<Font>().await?;
@@ -54,15 +48,12 @@ impl State {
                     .clone()
                     .into_iter()
                     .map(Result::<_, Infallible>::Ok);
-                let glyphs = match Glyph::generate_variants(iter) {
-                    Ok(candidates) => candidates,
-                    Err(err) => match err {},
-                };
-                let mut glyph_ids = Vec::<Id<Glyph>>::new();
-                for glyph in glyphs {
-                    glyph_ids.push(self.add_glyph(&glyph).await?);
-                }
-                glyph_ids
+                self.add_glyphs(
+                    &match Glyph::generate_variants(iter) {
+                        Ok(candidates) => candidates,
+                        Err(never) => match never {},
+                    }
+                ).await?
             },
         };
         self.fonts.insert(
@@ -92,13 +83,20 @@ impl State {
     pub async fn submit_time(&self, user_id: Id<User>, time: f64) {
     }
 
-    async fn add_glyph(&self, glyph: &Glyph) -> Result<Id<Glyph>, E> {
-        let id = self.generate_id::<Glyph>().await?;
-        self.glyphs.insert(
-            id.to_bytes()?,
-            glyph.to_bytes()?,
-        )?;
-        Ok(id)
+    async fn add_glyphs(&self, glyphs: &[Glyph]) -> Result<Vec<Id<Glyph>>, E> {
+        let mut glyph_ids = Vec::<Id<Glyph>>::with_capacity(glyphs.len());
+
+        for glyph in glyphs {
+            let id = self.generate_id::<Glyph>().await?;
+            glyph_ids.push(id);
+
+            self.glyphs.insert(
+                id.to_bytes()?,
+                glyph.to_bytes()?,
+            )?;
+        }
+
+        Ok(glyph_ids)
     }
 
     async fn generate_id<T>(&self) -> Result<Id<T>, E> {
