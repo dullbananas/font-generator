@@ -16,30 +16,29 @@ pub struct State {
 
 // Functions that interact with the database are async just in case sled adds async support
 impl State {
-    pub async fn new() -> Self {
+    pub async fn new() -> Result<Self, E> {
         let db = sled::Config::default()
             .path("DullBananasFontGenData")
             .mode(sled::Mode::LowSpace)
-            .open()
-            .unwrap();
+            .open()?;
 
-        State {
-            glyphs: db.open_tree(b"glyphs").unwrap(),
-            font_versions: db.open_tree(b"font_versions").unwrap(),
-            fonts: db.open_tree(b"fonts").unwrap(),
+        Ok(State {
+            glyphs: db.open_tree(b"glyphs")?,
+            font_versions: db.open_tree(b"font_versions")?,
+            fonts: db.open_tree(b"fonts")?,
 
             db,
-        }
+        })
     }
 
     pub async fn add_font(&self, glyphs: Vec<Glyph>) -> Result<Id<Font>, E> {
-        let version_id = self.generate_id::<font::Version>().await?;
+        let version_id = self.generate_id().await?;
         let _: font::Version = self.add_font_version(
             version_id,
             self.add_glyphs(&glyphs).await?,
         ).await?;
 
-        let font_id = self.generate_id::<Font>().await?;
+        let font_id = self.generate_id().await?;
         let font = Font {
             first_version: version_id,
             current_version: version_id,
@@ -70,7 +69,7 @@ impl State {
         glyph_ids: Vec<Id<Glyph>>,
     ) -> Result<font::Version, E> {
         let version = font::Version {
-            next_version: self.generate_id::<font::Version>().await?,
+            next_version: self.generate_id().await?,
             glyphs: glyph_ids,
         };
         self.font_versions.insert(
@@ -84,10 +83,10 @@ impl State {
     }
 
     async fn add_glyphs(&self, glyphs: &[Glyph]) -> Result<Vec<Id<Glyph>>, E> {
-        let mut glyph_ids = Vec::<Id<Glyph>>::with_capacity(glyphs.len());
+        let mut glyph_ids = Vec::with_capacity(glyphs.len());
 
         for glyph in glyphs {
-            let id = self.generate_id::<Glyph>().await?;
+            let id = self.generate_id().await?;
             glyph_ids.push(id);
 
             self.glyphs.insert(
@@ -101,6 +100,6 @@ impl State {
 
     async fn generate_id<T>(&self) -> Result<Id<T>, E> {
         let id = self.db.generate_id()?;
-        Ok(Id::<T>::new(id))
+        Ok(Id::new(id))
     }
 }
