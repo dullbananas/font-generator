@@ -1,4 +1,5 @@
 use crate::font::{self, Font};
+use crate::test_session::{TestSession};
 use crate::user::{User};
 use crate::util::{Error as E};
 use deku::prelude::*;
@@ -12,6 +13,7 @@ pub struct State {
     glyphs: sled::Tree,
     font_versions: sled::Tree,
     fonts: sled::Tree,
+    test_sessions: sled::Tree,
 }
 
 // Functions that interact with the database are async just in case sled adds async support
@@ -26,7 +28,9 @@ impl State {
             glyphs: db.open_tree(b"glyphs")?,
             font_versions: db.open_tree(b"font_versions")?,
             fonts: db.open_tree(b"fonts")?,
+            test_sessions: db.open_tree(b"test_sessions")?,
 
+            // Move db into this struct after db.open_tree is no longer needed
             db,
         })
     }
@@ -79,7 +83,13 @@ impl State {
         Ok(version)
     }
 
-    pub async fn submit_time(&self, user_id: Id<User>, time: f64) {
+    pub async fn submit_time(&self, user_id: Id<User>, time: f64) -> Result<(), E> {
+        if let Some(session: TestSession) = {
+            let bytes = self.test_sessions.remove(user_id.to_bytes()?)?;
+            DekuContainerRead::from_bytes((bytes, 0))
+        } {
+            let change_glyph: bool = match get_glyph_score
+        }
     }
 
     async fn add_glyphs(&self, glyphs: &[Glyph]) -> Result<Vec<Id<Glyph>>, E> {
