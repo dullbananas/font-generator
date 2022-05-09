@@ -1,1 +1,1 @@
-# font-generator
+# Font generator
