@@ -1,6 +1,17 @@
 use deku::bitvec::{BitVec, Msb0};
 use deku::prelude::*;
 
+/// `DekuRW<'a>` is the same as `DekuContainerRead<'a> + DekuContainerWrite`
+pub trait DekuRW<'deku>
+where
+    Self: DekuContainerRead<'deku> + DekuContainerWrite,
+{}
+
+impl<'deku, T> DekuRW<'deku> for T
+where
+    T: DekuContainerRead<'deku> + DekuContainerWrite,
+{}
+
 pub fn char_map(n: u32) -> Result<char, DekuError> {
     char::from_u32(n)
         .ok_or(DekuError::Parse("invalid_char".to_owned()))

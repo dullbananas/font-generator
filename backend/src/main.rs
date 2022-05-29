@@ -1,3 +1,5 @@
+mod active_test;
+mod database;
 mod endpoint;
 mod font;
 mod state;

@@ -1,68 +1,60 @@
+use crate::active_test::{ActiveTest};
+use crate::database::{Database, Tree};
 use crate::font::{self, Font};
-use crate::test_session::{TestSession};
 use crate::user::{User};
 use crate::util::{Error as E};
 use deku::prelude::*;
 use shared::glyph::{Glyph};
 use shared::id::{Id};
-use std::convert::{Infallible};
+
+pub type Request = tide::Request<State>;
 
 #[derive(Clone)]
 pub struct State {
-    db: sled::Db,
-    glyphs: sled::Tree,
-    font_versions: sled::Tree,
-    fonts: sled::Tree,
-    test_sessions: sled::Tree,
+    db: Database,
+    glyphs: Tree<Glyph>,
+    font_versions: Tree<font::Version>,
+    fonts: Tree<Font>,
+    active_tests: Tree<ActiveTest, Id<User>>,
 }
 
-// Functions that interact with the database are async just in case sled adds async support
 impl State {
     pub async fn new() -> Result<Self, E> {
-        let db = sled::Config::default()
-            .path("DullBananasFontGenData")
-            .mode(sled::Mode::LowSpace)
-            .open()?;
+        let db = Database::open().await?;
 
         Ok(State {
-            glyphs: db.open_tree(b"glyphs")?,
-            font_versions: db.open_tree(b"font_versions")?,
-            fonts: db.open_tree(b"fonts")?,
-            test_sessions: db.open_tree(b"test_sessions")?,
+            glyphs: db.tree(b"glyphs").await?,
+            font_versions: db.tree(b"font_versions").await?,
+            fonts: db.tree(b"fonts").await?,
+            active_tests: db.tree(b"test_sessions").await?,
 
-            // Move db into this struct after db.open_tree is no longer needed
+            // Move db into this struct after db.tree is no longer needed
             db,
         })
     }
 
     pub async fn add_font(&self, glyphs: Vec<Glyph>) -> Result<Id<Font>, E> {
-        let version_id = self.generate_id().await?;
+        let first_version_id = self.db.generate_id().await?;
         let _: font::Version = self.add_font_version(
-            version_id,
-            self.add_glyphs(&glyphs).await?,
+            first_version_id,
+            self.glyphs.insert_each(glyphs.iter()).await?,
         ).await?;
 
-        let font_id = self.generate_id().await?;
         let font = Font {
-            first_version: version_id,
-            current_version: version_id,
-            candidates: {
+            first_version: first_version_id,
+            current_version: first_version_id,
+            candidates: self.glyphs.insert_each({
                 let iter = glyphs
                     .clone()
                     .into_iter()
-                    .map(Result::<_, Infallible>::Ok);
-                self.add_glyphs(
-                    &match Glyph::generate_variants(iter) {
-                        Ok(candidates) => candidates,
-                        Err(never) => match never {},
-                    }
-                ).await?
-            },
+                    .map(Result::<_, std::convert::Infallible>::Ok);
+                match Glyph::generate_variants(iter) {
+                    Ok(candidates) => candidates,
+                    Err(never) => match never {},
+                }.iter()
+            }).await?,
         };
-        self.fonts.insert(
-            font_id.to_bytes()?,
-            font.to_bytes()?,
-        )?;
+        let font_id = self.fonts.insert(&font).await?;
 
         Ok(font_id)
     }
@@ -73,43 +65,14 @@ impl State {
         glyph_ids: Vec<Id<Glyph>>,
     ) -> Result<font::Version, E> {
         let version = font::Version {
-            next_version: self.generate_id().await?,
+            next_version: self.db.generate_id().await?,
             glyphs: glyph_ids,
         };
-        self.font_versions.insert(
-            id.to_bytes()?,
-            version.to_bytes()?,
-        )?;
+        self.font_versions.insert_with_key(id, &version).await?;
         Ok(version)
     }
 
     pub async fn submit_time(&self, user_id: Id<User>, time: f64) -> Result<(), E> {
-        if let Some(session: TestSession) = {
-            let bytes = self.test_sessions.remove(user_id.to_bytes()?)?;
-            DekuContainerRead::from_bytes((bytes, 0))
-        } {
-            let change_glyph: bool = match get_glyph_score
-        }
-    }
-
-    async fn add_glyphs(&self, glyphs: &[Glyph]) -> Result<Vec<Id<Glyph>>, E> {
-        let mut glyph_ids = Vec::with_capacity(glyphs.len());
-
-        for glyph in glyphs {
-            let id = self.generate_id().await?;
-            glyph_ids.push(id);
-
-            self.glyphs.insert(
-                id.to_bytes()?,
-                glyph.to_bytes()?,
-            )?;
-        }
-
-        Ok(glyph_ids)
-    }
-
-    async fn generate_id<T>(&self) -> Result<Id<T>, E> {
-        let id = self.db.generate_id()?;
-        Ok(Id::new(id))
+        todo!()
     }
 }

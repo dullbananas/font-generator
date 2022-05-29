@@ -1,7 +1,3 @@
-use crate::state::State;
-
-pub type Request = tide::Request<State>;
-
 #[derive(Debug)]
 pub struct Error {
     message: String,

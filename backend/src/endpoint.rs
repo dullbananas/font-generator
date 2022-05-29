@@ -1,5 +1,4 @@
-use crate::util::{Request};
-use crate::state::State;
+use crate::state::{Request};
 
 pub async fn test(req: Request) -> tide::Result {
     let id = req.param("id")?;
