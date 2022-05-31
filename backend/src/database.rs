@@ -60,6 +60,21 @@ where
         )?;
         Ok(())
     }
+
+    /// Return the item's value, or `Ok(None)` if it doesn't exist.
+    pub async fn get(&self, key: Key) -> Result<Option<T>, E> {
+        Ok(match self.tree.get(key.to_bytes()?)? {
+            Some(bytes) => Some(DekuRW::read(&bytes)?),
+            None => None,
+        })
+    }
+
+    pub async fn remove(&self, key: Key) -> Result<Option<T>, E> {
+        Ok(match self.tree.remove(key.to_bytes()?)? {
+            Some(bytes) => Some(DekuRW::read(&bytes)?),
+            None => None,
+        })
+    }
 }
 
 impl<T> Tree<T, Id<T>>
