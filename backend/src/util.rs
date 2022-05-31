@@ -3,6 +3,17 @@ pub struct Error {
     message: String,
 }
 
+impl Error {
+    pub fn expect_db_item<T>(result: Option<T>) -> Result<T, Error> {
+        result.ok_or(Error {
+            message: format!(
+                "Could not find a value of type \"{}\" in the database.",
+                std::any::type_name::<T>(),
+            ),
+        })
+    }
+}
+
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         use std::io::ErrorKind::*;
