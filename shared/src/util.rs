@@ -1,15 +1,19 @@
 use deku::bitvec::{BitVec, Msb0};
 use deku::prelude::*;
 
-/// `DekuRW<'a>` is the same as `DekuContainerRead<'a> + DekuContainerWrite`
-pub trait DekuRW<'deku>
+pub trait DekuRW
 where
-    Self: DekuContainerRead<'deku> + DekuContainerWrite,
-{}
+    Self: for<'a> DekuContainerRead<'a> + DekuContainerWrite + Sized,
+{
+    fn read(bytes: &[u8]) -> Result<Self, DekuError> {
+        let bit_offset = 0;
+        Ok(DekuContainerRead::from_bytes((bytes, bit_offset))?.1)
+    }
+}
 
-impl<'deku, T> DekuRW<'deku> for T
+impl<T> DekuRW for T
 where
-    T: DekuContainerRead<'deku> + DekuContainerWrite,
+    T: for<'a> DekuContainerRead<'a> + DekuContainerWrite + Sized,
 {}
 
 pub fn char_map(n: u32) -> Result<char, DekuError> {

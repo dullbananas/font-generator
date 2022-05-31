@@ -47,10 +47,10 @@ pub struct Tree<T, Key = Id<T>> {
     phantom: PhantomData<(T, Key)>,
 }
 
-impl<'deku, T, Key> Tree<T, Key>
+impl<T, Key> Tree<T, Key>
 where
-    T: DekuRW<'deku>,
-    Key: DekuRW<'deku>,
+    T: DekuRW,
+    Key: DekuRW,
 {
     /// Insert a value with the specified key.
     pub async fn insert_with_key(&self, key: Key, value: &T) -> Result<(), E> {
@@ -62,9 +62,9 @@ where
     }
 }
 
-impl<'deku, T> Tree<T, Id<T>>
+impl<T> Tree<T, Id<T>>
 where
-    T: DekuRW<'deku>,
+    T: DekuRW,
 {
     /// Insert a value with an automatically chosen key that hasn't been used yet, and return the key.
     pub async fn insert(&self, value: &T) -> Result<Id<T>, E> {
