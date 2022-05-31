@@ -11,11 +11,13 @@ pub type Request = tide::Request<State>;
 
 #[derive(Clone)]
 pub struct State {
-    db: Database,
-    glyphs: Tree<Glyph>,
+    active_tests: Tree<ActiveTest, Id<User>>,
+    font_version_glyphs: Tree<font::VersionGlyph, font::VersionGlyphKey>,
     font_versions: Tree<font::Version>,
     fonts: Tree<Font>,
-    active_tests: Tree<ActiveTest, Id<User>>,
+    glyphs: Tree<Glyph>,
+
+    db: Database,
 }
 
 impl State {
@@ -23,10 +25,11 @@ impl State {
         let db = Database::open().await?;
 
         Ok(State {
-            glyphs: db.tree(b"glyphs").await?,
+            active_tests: db.tree(b"test_sessions").await?,
+            font_version_glyphs: db.tree(b"scores").await?,
             font_versions: db.tree(b"font_versions").await?,
             fonts: db.tree(b"fonts").await?,
-            active_tests: db.tree(b"test_sessions").await?,
+            glyphs: db.tree(b"glyphs").await?,
 
             // Move db into this struct after db.tree is no longer needed
             db,
@@ -37,7 +40,10 @@ impl State {
         let first_version_id = self.db.generate_id().await?;
         let _: font::Version = self.add_font_version(
             first_version_id,
-            self.glyphs.insert_each(glyphs.iter()).await?,
+            self.glyphs.insert_each(glyphs.iter()).await?.into_iter().map(|id| font::VersionGlyph {
+                glyph: id,
+                score: None,
+            }),
         ).await?;
 
         let font = Font {
@@ -62,17 +68,65 @@ impl State {
     async fn add_font_version(
         &self,
         id: Id<font::Version>,
-        glyph_ids: Vec<Id<Glyph>>,
+        version_glyphs: impl Iterator<Item = font::VersionGlyph>,
     ) -> Result<font::Version, E> {
         let version = font::Version {
             next_version: self.db.generate_id().await?,
-            glyphs: glyph_ids,
         };
         self.font_versions.insert_with_key(id, &version).await?;
+
+        for version_glyph in version_glyphs {
+            self.font_version_glyphs.insert_with_key(
+                font::VersionGlyphKey {
+                    font_version: id,
+                    char: self.get_glyph_char(version_glyph.glyph).await?,
+                },
+                &version_glyph,
+            ).await?;
+        }
+
         Ok(version)
     }
 
-    pub async fn submit_time(&self, user_id: Id<User>, time: f64) -> Result<(), E> {
-        todo!()
+    pub async fn submit_time(
+        &self,
+        user_id: Id<User>,
+        new_time: f64,
+    ) -> Result<(), E> {
+        let test = match self.active_tests.remove(user_id).await? {
+            Some(removed_value) => removed_value,
+            None => return Ok(()),
+        };
+
+        let font = E::expect_db_item(self.fonts.get(test.font).await?)?;
+
+        let version_glyph_key = font::VersionGlyphKey {
+            font_version: font.current_version,
+            char: self.get_glyph_char(test.glyph).await?,
+        };
+
+        match self.font_version_glyphs.get(version_glyph_key).await? {
+            Some(font::VersionGlyph {
+                score: Some(font::Score { time, .. }),
+                ..
+            }) if new_time > time => {},
+            _ => {
+                self.font_version_glyphs.insert_with_key(
+                    version_glyph_key,
+                    &font::VersionGlyph {
+                        glyph: test.glyph,
+                        score: Some(font::Score {
+                            time: new_time,
+                            user: user_id,
+                        }),
+                    },
+                ).await?;
+            },
+        };
+        Ok(())
+    }
+
+    async fn get_glyph_char(&self, glyph_id: Id<Glyph>) -> Result<char, E> {
+        Ok(E::expect_db_item(self.glyphs.get(glyph_id).await?)?.char())
     }
 }

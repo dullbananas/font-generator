@@ -19,37 +19,28 @@ pub struct Font {
 pub struct Version {
     // An ID that might not be in use yet
     pub next_version: Id<Version>,
-    #[deku(bits_read = "deku::rest.len()")]
-    pub glyphs: Vec<Id<Glyph>>,
 }
 
-#[derive(DekuRead, DekuWrite)]
+/// Identifies a `Version` and one of its glyphs.
+#[derive(DekuRead, DekuWrite, Clone, Copy)]
 #[deku(endian = "big")]
-struct ScoreKey {
-    font_version: Id<Version>,
+pub struct VersionGlyphKey {
+    pub font_version: Id<Version>,
     #[deku(map = "char_map", writer = "char_write(deku::output, char)")]
-    char: char,
+    pub char: char,
 }
 
 #[derive(DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-struct Score {
-    score: f64,
-    user: Id<User>,
-}
-
-/*#[derive(DekuRead, DekuWrite)]
-#[deku(endian = "big")]
-struct GlyphVersionKey {
-    font: Id<Font>,
-    version: Id<Version>,
-    item_char: char,
+pub struct VersionGlyph {
+    pub glyph: Id<Glyph>,
+    #[deku(cond = "deku::rest.len() != 0")]
+    pub score: Option<Score>,
 }
 
 #[derive(DekuRead, DekuWrite)]
-#[deku(endian = "big")]
-struct GlyphVersion {
-    glyph: Id<Glyph>,
-    #[deku(cond = "deku::rest.len() > 0")]
-    score: Option<f64>,
-}*/
+#[deku(endian = "big", ctx = "endian: deku::ctx::Endian", ctx_default = "deku::ctx::Endian::Big")]
+pub struct Score {
+    pub time: f64,
+    pub user: Id<User>,
+}
