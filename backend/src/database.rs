@@ -1,5 +1,6 @@
 // Functions are async for future-proofing
 
+use async_std::stream::{self, Stream};
 use crate::util::{Error as E};
 use deku::prelude::*;
 use shared::util::{DekuRW};
@@ -78,6 +79,22 @@ where
             Some(bytes) => Some(DekuRW::read(&bytes)?),
             None => None,
         })
+    }
+
+    /// Return all items with a key that begins with the specified value.
+    pub fn scan_prefix<P>(&self, prefix: P) -> Result<impl Stream<Item = Result<(Key, T), E>>, E>
+    where
+        P: DekuRW,
+    {
+        Ok(stream::from_iter(self.tree.scan_prefix(prefix.to_bytes()?)
+            .map(|result| match result {
+                Ok((key, value)) => Ok((
+                    DekuRW::read(&key)?,
+                    DekuRW::read(&value)?,
+                )),
+                Err(err) => Err(err.into()),
+            })
+        ))
     }
 }
 
