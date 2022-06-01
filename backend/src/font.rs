@@ -1,8 +1,8 @@
+use crate::database::{Id};
 use crate::user::{User};
 use deku::prelude::*;
 use shared::glyph::{Glyph};
 use shared::util::{char_map, char_write};
-use shared::id::{Id};
 
 #[derive(DekuRead, DekuWrite)]
 #[deku(endian = "big")]

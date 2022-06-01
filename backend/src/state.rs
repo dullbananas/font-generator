@@ -1,11 +1,9 @@
 use crate::active_test::{ActiveTest};
-use crate::database::{Database, Tree};
+use crate::database::{Database, Id, Tree};
 use crate::font::{self, Font};
 use crate::user::{User};
 use crate::util::{Error as E};
-use deku::prelude::*;
 use shared::glyph::{Glyph};
-use shared::id::{Id};
 
 pub type Request = tide::Request<State>;
 
@@ -16,8 +14,6 @@ pub struct State {
     font_versions: Tree<font::Version>,
     fonts: Tree<Font>,
     glyphs: Tree<Glyph>,
-
-    db: Database,
 }
 
 impl State {
@@ -30,14 +26,11 @@ impl State {
             font_versions: db.tree(b"font_versions").await?,
             fonts: db.tree(b"fonts").await?,
             glyphs: db.tree(b"glyphs").await?,
-
-            // Move db into this struct after db.tree is no longer needed
-            db,
         })
     }
 
     pub async fn add_font(&self, glyphs: Vec<Glyph>) -> Result<Id<Font>, E> {
-        let first_version_id = self.db.generate_id().await?;
+        let first_version_id = Id::generate(&self.font_versions).await?;
         let _: font::Version = self.add_font_version(
             first_version_id,
             self.glyphs.insert_each(glyphs.iter()).await?.into_iter().map(|id| font::VersionGlyph {
@@ -71,7 +64,7 @@ impl State {
         version_glyphs: impl Iterator<Item = font::VersionGlyph>,
     ) -> Result<font::Version, E> {
         let version = font::Version {
-            next_version: self.db.generate_id().await?,
+            next_version: Id::generate(&self.font_versions).await?,
         };
         self.font_versions.insert_with_key(id, &version).await?;
 

@@ -2,7 +2,6 @@
 
 use crate::util::{Error as E};
 use deku::prelude::*;
-use shared::id::{Id};
 use shared::util::{DekuRW};
 use std::marker::{PhantomData};
 
@@ -11,6 +10,25 @@ use std::marker::{PhantomData};
 pub struct Database {
     db: sled::Db,
 }
+
+/// Stores items similarly to `std::collections::BTreeMap<Key, T>`.
+pub struct Tree<T, Key = Id<T>> {
+    db: sled::Db,
+    tree: sled::Tree,
+    phantom: PhantomData<(T, Key)>,
+}
+
+#[derive(DekuRead, DekuWrite)]
+#[deku(endian = "big", ctx = "endian: deku::ctx::Endian", ctx_default = "deku::ctx::Endian::Big")]
+pub struct Id<T> {
+    id: u64,
+    #[deku(skip)]
+    phantom: PhantomData<T>,
+}
+
+shared::impl_clone!(Tree<T, Key> { db, tree });
+shared::impl_clone!(Id<T> { id });
+impl<T> Copy for Id<T> {}
 
 impl Database {
     /// Open the DullBananasFontGenData directory, which contains all trees.
@@ -31,20 +49,6 @@ impl Database {
             phantom: PhantomData,
         })
     }
-
-    /// Reserve an `Id` for any type. If the returned `Id` will be used immediately, use `Tree::insert` instead.
-    pub async fn generate_id<T>(&self) -> Result<Id<T>, E> {
-        Ok(Id::new(
-            self.db.generate_id()?,
-        ))
-    }
-}
-
-/// Stores items similarly to `std::collections::BTreeMap<Key, T>`.
-pub struct Tree<T, Key = Id<T>> {
-    db: sled::Db,
-    tree: sled::Tree,
-    phantom: PhantomData<(T, Key)>,
 }
 
 impl<T, Key> Tree<T, Key>
@@ -83,7 +87,10 @@ where
 {
     /// Insert a value with an automatically chosen key that hasn't been used yet, and return the key.
     pub async fn insert(&self, value: &T) -> Result<Id<T>, E> {
-        let key = Id::new(self.db.generate_id()?);
+        let key = Id {
+            id: self.db.generate_id()?,
+            phantom: PhantomData,
+        };
         self.insert_with_key(key, value).await?;
         Ok(key)
     }
@@ -105,13 +112,12 @@ where
     }
 }
 
-// T and Key don't need to be clonable
-impl<T, Key> Clone for Tree<T, Key> {
-    fn clone(&self) -> Tree<T, Key> {
-        Tree {
-            db: self.db.clone(),
-            tree: self.tree.clone(),
+impl<T> Id<T> {
+    /// Reserve an `Id` for any type. In most cases, use `Tree::insert` instead.
+    pub async fn generate(tree: &Tree<T, Self>) -> Result<Self, E> {
+        Ok(Id {
+            id: tree.db.generate_id()?,
             phantom: PhantomData,
-        }
+        })
     }
 }
