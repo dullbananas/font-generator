@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rust-argon2 = { version = "1.0" }
-async-std = { version = "1.10" }
+rust-argon2 = { version = "1.0", default-features = false, features = [] }
+async-std = { version = "1.10", default-features = false, features = [] }
 deku = { version = "0.13" }
 shared = { version = "0.1.0", path = "../shared" }
 sled = { version = "0.34" }
