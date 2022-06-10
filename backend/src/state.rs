@@ -176,6 +176,16 @@ impl State {
         Ok(())
     }
 
+    pub async fn get_test_glyph(
+        &self,
+        user_id: Id<User>,
+    ) -> Result<Option<Glyph>, E> {
+        Ok(match self.active_tests.get(user_id).await? {
+            Some(test) => self.glyphs.get(test.glyph).await?,
+            None => None,
+        })
+    }
+
     async fn get_glyph_char(&self, glyph_id: Id<Glyph>) -> Result<char, E> {
         Ok(E::expect_db_item(self.glyphs.get(glyph_id).await?)?.char())
     }
