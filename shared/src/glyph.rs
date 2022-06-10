@@ -72,18 +72,18 @@ impl Glyph {
         }
     }
 
-    pub fn generate_variants<Iter, E>(old_glyphs: Iter) -> Result<Vec<Glyph>, E>
+    pub fn generate_variants<'a, Iter>(old_glyphs: Iter) -> Vec<Glyph>
     where
-        Iter: Iterator<Item = Result<Glyph, E>>,
+        Iter: Iterator<Item = &'a Glyph>,
     {
         let mut variants = Vec::<Glyph>::new();
-        for glyph_result in old_glyphs {
-            let mut glyph = glyph_result?;
+        for old_glyph in old_glyphs {
+            let mut glyph = old_glyph.clone();
             glyph.mutate();
             variants.push(glyph);
         }
         fastrand::shuffle(&mut variants);
-        Ok(variants)
+        variants
     }
 }
 

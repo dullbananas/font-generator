@@ -1,3 +1,4 @@
+use async_std::stream::{Stream, StreamExt};
 use crate::active_test::{ActiveTest};
 use crate::database::{Database, Id, Tree};
 use crate::font::{self, Font};
@@ -33,25 +34,24 @@ impl State {
         let first_version_id = Id::generate(&self.font_versions).await?;
         let _: font::Version = self.add_font_version(
             first_version_id,
-            self.glyphs.insert_each(glyphs.iter()).await?.into_iter().map(|id| font::VersionGlyph {
-                glyph: id,
-                score: None,
-            }),
+            self.glyphs
+                .insert_each(glyphs.iter()).await?
+                .into_iter()
+                .map(|id| font::VersionGlyph {
+                    glyph: id,
+                    score: None,
+                })
+                // Convert items to borrowed items
+                .collect::<Vec<_>>()
+                .iter(),
         ).await?;
 
         let font = Font {
             first_version: first_version_id,
             current_version: first_version_id,
-            candidates: self.glyphs.insert_each({
-                let iter = glyphs
-                    .clone()
-                    .into_iter()
-                    .map(Result::<_, std::convert::Infallible>::Ok);
-                match Glyph::generate_variants(iter) {
-                    Ok(candidates) => candidates,
-                    Err(never) => match never {},
-                }.iter()
-            }).await?,
+            candidates: self.glyphs.insert_each(
+                Glyph::generate_variants(glyphs.iter()).iter()
+            ).await?,
         };
         let font_id = self.fonts.insert(&font).await?;
 
@@ -61,7 +61,7 @@ impl State {
     async fn add_font_version(
         &self,
         id: Id<font::Version>,
-        version_glyphs: impl Iterator<Item = font::VersionGlyph>,
+        version_glyphs: impl Iterator<Item = &font::VersionGlyph>,
     ) -> Result<font::Version, E> {
         let version = font::Version {
             next_version: Id::generate(&self.font_versions).await?,
@@ -116,6 +116,63 @@ impl State {
                 ).await?;
             },
         };
+        Ok(())
+    }
+
+    pub async fn add_next_test(
+        &self,
+        font_id: Id<Font>,
+        user_id: Id<User>,
+    ) -> Result<(), E> {
+        let mut font = E::expect_db_item(self.fonts.get(font_id).await?)?;
+
+        if font.candidates.is_empty() {
+            // Get from the current font version
+            let version_glyphs: Vec<font::VersionGlyph> = {
+                let mut stream = self.font_version_glyphs.scan_prefix(font.current_version)?;
+                let mut vec = Vec::with_capacity(stream.size_hint().0);
+                while let Some(result) = stream.next().await {
+                    vec.push(result?.1);
+                }
+                vec
+            };
+
+            // Duplicate the current font version, with the same `font::VersionGlyph`s being included
+            font.current_version = {
+                let id = E::expect_db_item(
+                    self.font_versions.get(font.current_version).await?
+                )?.next_version;
+                let _: font::Version = self.add_font_version(id, version_glyphs.iter()).await?;
+                id
+            };
+
+            // Add candidates
+            font.candidates = {
+                let mut glyphs = Vec::with_capacity(version_glyphs.len());
+                for font::VersionGlyph { glyph, .. } in version_glyphs {
+                    glyphs.push(
+                        E::expect_db_item(self.glyphs.get(glyph).await?)?
+                    );
+                }
+                self.glyphs.insert_each(
+                    Glyph::generate_variants(glyphs.iter()).iter()
+                ).await?
+            };
+
+            // Save the modified font
+            self.fonts.insert_with_key(font_id, &font).await?;
+        }
+
+        if let Some(&glyph_id) = font.candidates.first() {
+            self.active_tests.insert_with_key(
+                user_id,
+                &ActiveTest {
+                    font: font_id,
+                    glyph: glyph_id,
+                },
+            ).await?;
+        }
+
         Ok(())
     }
 
