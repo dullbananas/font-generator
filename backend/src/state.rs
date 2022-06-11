@@ -6,8 +6,6 @@ use crate::user::{User};
 use crate::util::{Error as E};
 use shared::glyph::{Glyph};
 
-pub type Request = tide::Request<State>;
-
 #[derive(Clone)]
 pub struct State {
     active_tests: Tree<ActiveTest, Id<User>>,

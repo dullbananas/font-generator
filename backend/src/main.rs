@@ -1,6 +1,6 @@
 mod active_test;
 mod database;
-mod endpoint;
+mod endpoints;
 mod font;
 mod state;
 mod user;
@@ -15,9 +15,16 @@ fn main() {
 }
 
 async fn run_server() -> Result<(), Error> {
-    let mut app = tide::with_state(State::new().await?);
-    app.at("/font/:id/test").get(endpoint::test);
-    app.at("/font/:id/edit").get(endpoint::edit);
-    app.listen("127.0.0.1:8080").await?;
+    let address = format!(
+        "127.0.0.1:{}",
+        std::env::var("PORT")
+            .unwrap_or("8080".to_owned()),
+    );
+
+    let mut server = tide::with_state(State::new().await?);
+    endpoints::init(&mut server);
+    println!("Running server at {}", address);
+    server.listen(address).await?;
+
     Ok(())
 }
