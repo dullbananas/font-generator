@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rust-argon2 = { version = "1.0", default-features = false, features = [] }
 async-std = { version = "1.10", default-features = false, features = [] }
 deku = { version = "0.13" }
+rust-argon2 = { version = "1.0", default-features = false, features = [] }
 shared = { version = "0.1.0", path = "../shared" }
 sled = { version = "0.34" }
 tide = { version = "0.16" }
+typed-html = { git = "https://github.com/bodil/typed-html", rev = "4c13ecca" }

@@ -22,7 +22,7 @@ async fn run_server() -> Result<(), Error> {
     );
 
     let mut server = tide::with_state(State::new().await?);
-    endpoints::init(&mut server);
+    endpoints::init(&mut server)?;
     println!("Running server at {}", address);
     server.listen(address).await?;
 
