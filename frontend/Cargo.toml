@@ -1,5 +1,5 @@
 [package]
-name = "font-editor"
+name = "frontend"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,5 +10,7 @@ crate-type = ["cdylib"]
 console_error_panic_hook = { version = "0.1" }
 rexie = { version = "0.4", default-features = false }
 shared = { version = "0.1.0", path = "../shared" }
+sycamore = { version = "0.7" }
+sycamore-router = { version = "0.7" }
 wasm-bindgen = { version = "0.2.81" }
 wasm-bindgen-futures = { version = "0.4" }
