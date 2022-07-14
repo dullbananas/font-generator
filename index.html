@@ -5,8 +5,18 @@
         <link rel="stylesheet" href="style.css"/>
     </head>
     <body>
+        <script>
+            "use strict";
+            function GlyphDbObject(char, value) {
+                this.char = char;
+                this.value = value;
+            };
+        </script>
         <script src="target/wasm.js"></script>
-        <script>"use strict"; wasm_bindgen("target/wasm_bg.wasm");</script>
+        <script>
+            "use strict";
+            wasm_bindgen("target/wasm_bg.wasm");
+        </script>
         <noscript><p>JavaScript is disabled.</p></noscript>
     </body>
 </html>

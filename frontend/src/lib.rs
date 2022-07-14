@@ -1,3 +1,4 @@
+mod error;
 mod font_editor;
 
 use sycamore::prelude::*;

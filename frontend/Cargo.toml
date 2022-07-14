@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 console_error_panic_hook = { version = "0.1" }
+deku = { version = "0.13" }
 rexie = { version = "0.4", default-features = false }
 shared = { version = "0.1.0", path = "../shared" }
 sycamore = { version = "0.7" }
