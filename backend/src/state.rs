@@ -3,7 +3,7 @@ use crate::active_test::{ActiveTest};
 use crate::database::{Database, Id, Tree};
 use crate::font::{self, Font};
 use crate::user::{User};
-use crate::util::{Error as E};
+use crate::error::{Error as E};
 use shared::glyph::{Glyph};
 
 #[derive(Clone)]

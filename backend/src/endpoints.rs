@@ -1,5 +1,5 @@
 use crate::state::{State};
-use crate::util::{Error as E};
+use crate::error::{Error as E};
 
 type Request = tide::Request<State>;
 

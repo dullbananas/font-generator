@@ -1,13 +1,13 @@
 mod active_test;
 mod database;
 mod endpoints;
+mod error;
 mod font;
 mod state;
 mod user;
-mod util;
 
 use crate::state::{State};
-use crate::util::{Error};
+use crate::error::{Error};
 
 fn main() {
     async_std::task::block_on(run_server())

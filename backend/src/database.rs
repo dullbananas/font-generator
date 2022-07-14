@@ -1,7 +1,7 @@
 // Functions are async for future-proofing
 
 use async_std::stream::{self, Stream};
-use crate::util::{Error as E};
+use crate::error::{Error as E};
 use deku::prelude::*;
 use shared::util::{DekuRW};
 use std::marker::{PhantomData};
