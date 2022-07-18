@@ -1,3 +1,4 @@
+mod char_input;
 mod error;
 mod font_editor;
 
@@ -31,7 +32,7 @@ pub fn init() {
                 });
 
                 view! {
-                    div {
+                    div(class="col fill") {
                         (body.get().as_ref().clone())
                     }
                 }

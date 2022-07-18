@@ -1,5 +1,7 @@
+mod glyph_list;
 mod state;
 
+use self::glyph_list::{GlyphList};
 use self::state::{State};
 use sycamore::prelude::*;
 
@@ -22,6 +24,9 @@ pub fn body() -> View<G> {
     view! {
         p {
             (db_status_string.get())
+        }
+        div(class="row fill") {
+            GlyphList(state.clone())
         }
     }
 }

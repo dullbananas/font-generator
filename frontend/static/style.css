@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.fill {
+    flex: 1;
+}
+
+.scroll {
+    overflow-y: scroll;
+}
+
+p {
+    margin: 0.5em 0;
+}
+
+.char-input {
+    width: 2em;
+}

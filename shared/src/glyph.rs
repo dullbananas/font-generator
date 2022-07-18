@@ -1,7 +1,7 @@
 use crate::util::{char_map, char_write};
 use deku::prelude::*;
 
-#[derive(DekuRead, DekuWrite, Clone)]
+#[derive(DekuRead, DekuWrite, Clone, PartialEq, Eq)]
 #[deku(endian = "big")]
 pub struct Glyph {
     #[deku(map = "char_map", writer = "char_write(deku::output, char)")]
@@ -10,7 +10,7 @@ pub struct Glyph {
     paths: Vec<Path>,
 }
 
-#[derive(DekuRead, DekuWrite, Clone)]
+#[derive(DekuRead, DekuWrite, Clone, PartialEq, Eq)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Path {
     #[deku(update = "self.points.len()")]
@@ -19,7 +19,7 @@ pub struct Path {
     points: Vec<Point>,
 }
 
-#[derive(DekuRead, DekuWrite, Clone)]
+#[derive(DekuRead, DekuWrite, Clone, PartialEq)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Point {
     x: f64,
@@ -27,6 +27,10 @@ pub struct Point {
     radians: f64,
     curviness: f64,
 }
+
+// `Glyph` must implement `Eq` to be used with `sycamore::flow::Keyed` because of lukechu10
+// https://github.com/sycamore-rs/sycamore/issues/452
+impl Eq for Point {}
 
 impl Glyph {
     pub fn new(char: char) -> Self {
