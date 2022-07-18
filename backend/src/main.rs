@@ -15,16 +15,14 @@ fn main() {
 }
 
 async fn run_server() -> Result<(), Error> {
-    let address = format!(
-        "127.0.0.1:{}",
-        std::env::var("PORT")
-            .unwrap_or("8080".to_owned()),
-    );
+    let address: Box<str> = std::env::var("ADDRESS")
+        .map(String::into_boxed_str)
+        .unwrap_or(Box::from("127.0.0.1:8080"));
 
     let mut server = tide::with_state(State::new().await?);
     endpoints::init(&mut server)?;
     println!("Running server at {}", address);
-    server.listen(address).await?;
+    server.listen(&*address).await?;
 
     Ok(())
 }
