@@ -7,14 +7,15 @@ mod state;
 mod user;
 
 use crate::state::{State};
-use crate::error::{Error};
+use crate::error::{InitError, Error};
 
 fn main() {
-    async_std::task::block_on(run_server())
-        .unwrap();
+    if let Err(error) = async_std::task::block_on(run_server()) {
+        eprintln!("Error: {}", error)
+    }
 }
 
-async fn run_server() -> Result<(), Error> {
+async fn run_server() -> Result<(), InitError> {
     let address: Box<str> = std::env::var("ADDRESS")
         .map(String::into_boxed_str)
         .unwrap_or(Box::from("127.0.0.1:8080"));

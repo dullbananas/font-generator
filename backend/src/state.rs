@@ -3,7 +3,7 @@ use crate::active_test::{ActiveTest};
 use crate::database::{Database, Id, Tree};
 use crate::font::{self, Font};
 use crate::user::{User};
-use crate::error::{Error as E};
+use crate::error::{InitError, Error as E};
 use shared::glyph::{Glyph};
 
 #[derive(Clone)]
@@ -16,7 +16,7 @@ pub struct State {
 }
 
 impl State {
-    pub async fn new() -> Result<Self, E> {
+    pub async fn new() -> Result<Self, InitError> {
         let db = Database::open().await?;
 
         Ok(State {

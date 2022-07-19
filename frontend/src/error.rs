@@ -1,4 +1,4 @@
-use std::fmt::{self};
+use std::fmt::{self, Display, Formatter}; // includes `Display::fmt` method
 
 #[derive(Debug)]
 pub enum DbError {
@@ -18,11 +18,11 @@ impl From<rexie::Error> for DbError {
     }
 }
 
-impl fmt::Display for DbError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for DbError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            DbError::DekuRead(_) => write!(f, "database is corrupted"),
-            DbError::Rexie(error) => write!(f, "{}", error),
+            DbError::DekuRead(_) => "database is corrupted".fmt(f),
+            DbError::Rexie(error) => error.fmt(f),
         }
     }
 }

@@ -1,3 +1,37 @@
+use std::fmt::{self, Display, Formatter}; // includes `Display::fmt` method
+use std::io::{self};
+
+#[derive(Debug)]
+pub enum InitError {
+    Io(io::Error),
+    Sled(sled::Error),
+}
+
+impl From<io::Error> for InitError {
+    fn from(error: io::Error) -> Self {
+        InitError::Io(error)
+    }
+}
+
+impl From<sled::Error> for InitError {
+    fn from(error: sled::Error) -> Self {
+        InitError::Sled(error)
+    }
+}
+
+impl Display for InitError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            InitError::Io(error) => match error.kind() {
+                io::ErrorKind::AddrInUse => "address or port is already taken (set the ADDRESS environment variable to change it)".fmt(f),
+                io::ErrorKind::AddrNotAvailable => "address is invalid".fmt(f),
+                _ => error.fmt(f),
+            },
+            InitError::Sled(error) => error.fmt(f),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Error {
     message: String,

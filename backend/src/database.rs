@@ -1,7 +1,7 @@
 // Functions are async for future-proofing
 
 use async_std::stream::{self, Stream};
-use crate::error::{Error as E};
+use crate::error::{InitError, Error as E};
 use deku::prelude::*;
 use shared::util::{DekuRW};
 use std::marker::{PhantomData};
@@ -33,7 +33,7 @@ impl<T> Copy for Id<T> {}
 
 impl Database {
     /// Open the DullBananasFontGenData directory, which contains all trees.
-    pub async fn open() -> Result<Self, E> {
+    pub async fn open() -> Result<Self, InitError> {
         Ok(Database {
             db: sled::Config::default()
                 .path("DullBananasFontGenData")
@@ -43,7 +43,7 @@ impl Database {
     }
 
     /// Open the named tree. `T` must be specified.
-    pub async fn tree<T, Key>(&self, name: &'static [u8]) -> Result<Tree<T, Key>, E> {
+    pub async fn tree<T, Key>(&self, name: &'static [u8]) -> Result<Tree<T, Key>, InitError> {
         Ok(Tree {
             db: self.db.clone(),
             tree: self.db.open_tree(name)?,
