@@ -67,11 +67,16 @@ where
     }
 
     /// Return the item's value, or `Ok(None)` if it doesn't exist.
-    pub async fn get(&self, key: Key) -> Result<Option<T>, E> {
+    pub async fn get_option(&self, key: Key) -> Result<Option<T>, E> {
         Ok(match self.tree.get(key.to_bytes()?)? {
             Some(bytes) => Some(DekuRW::read(&bytes)?),
             None => None,
         })
+    }
+
+    /// Return the item's value, or `Err` if it doesn't exist.
+    pub async fn get(&self, key: Key) -> Result<T, E> {
+        self.get_option(key).await?.ok_or_else(|| E::expect_db_item::<T>())
     }
 
     pub async fn remove(&self, key: Key) -> Result<Option<T>, E> {

@@ -89,14 +89,14 @@ impl State {
             None => return Ok(()),
         };
 
-        let font = E::expect_db_item(self.fonts.get(test.font).await?)?;
+        let font = self.fonts.get(test.font).await?;
 
         let version_glyph_key = font::VersionGlyphKey {
             font_version: font.current_version,
             char: self.get_glyph_char(test.glyph).await?,
         };
 
-        match self.font_version_glyphs.get(version_glyph_key).await? {
+        match self.font_version_glyphs.get_option(version_glyph_key).await? {
             Some(font::VersionGlyph {
                 score: Some(font::Score { time, .. }),
                 ..
@@ -122,7 +122,7 @@ impl State {
         font_id: Id<Font>,
         user_id: Id<User>,
     ) -> Result<(), E> {
-        let mut font = E::expect_db_item(self.fonts.get(font_id).await?)?;
+        let mut font = self.fonts.get(font_id).await?;
 
         if font.candidates.is_empty() {
             // Get from the current font version
@@ -137,9 +137,7 @@ impl State {
 
             // Duplicate the current font version, with the same `font::VersionGlyph`s being included
             font.current_version = {
-                let id = E::expect_db_item(
-                    self.font_versions.get(font.current_version).await?
-                )?.next_version;
+                let id = self.font_versions.get(font.current_version).await?.next_version;
                 let _: font::Version = self.add_font_version(id, version_glyphs.iter()).await?;
                 id
             };
@@ -149,7 +147,7 @@ impl State {
                 let mut glyphs = Vec::with_capacity(version_glyphs.len());
                 for font::VersionGlyph { glyph, .. } in version_glyphs {
                     glyphs.push(
-                        E::expect_db_item(self.glyphs.get(glyph).await?)?
+                        self.glyphs.get(glyph).await?
                     );
                 }
                 self.glyphs.insert_each(
@@ -178,13 +176,13 @@ impl State {
         &self,
         user_id: Id<User>,
     ) -> Result<Option<Glyph>, E> {
-        Ok(match self.active_tests.get(user_id).await? {
-            Some(test) => self.glyphs.get(test.glyph).await?,
+        Ok(match self.active_tests.get_option(user_id).await? {
+            Some(test) => self.glyphs.get_option(test.glyph).await?,
             None => None,
         })
     }
 
     async fn get_glyph_char(&self, glyph_id: Id<Glyph>) -> Result<char, E> {
-        Ok(E::expect_db_item(self.glyphs.get(glyph_id).await?)?.char())
+        Ok(self.glyphs.get(glyph_id).await?.char())
     }
 }

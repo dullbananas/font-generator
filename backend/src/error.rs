@@ -38,13 +38,13 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn expect_db_item<T>(result: Option<T>) -> Result<T, Error> {
-        result.ok_or(Error {
+    pub fn expect_db_item<T>() -> Self {
+        Error {
             message: format!(
                 "Could not find a value of type \"{}\" in the database.",
                 std::any::type_name::<T>(),
             ),
-        })
+        }
     }
 }
 
