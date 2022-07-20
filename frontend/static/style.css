@@ -4,7 +4,6 @@ html, body {
 }
 
 body {
-    margin: 0;
     font-family: sans-serif;
 }
 
@@ -44,6 +43,10 @@ input {
     background: inherit;
     border: 1px solid currentcolor;
     font-size: inherit;
+}
+
+body, h2 {
+    margin: 0;
 }
 
 @media (prefers-color-scheme: dark) {
