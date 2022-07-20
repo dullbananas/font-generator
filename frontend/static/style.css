@@ -1,16 +1,23 @@
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
 body {
     margin: 0;
-    width: 100vw;
-    height: 100vh;
+    font-family: sans-serif;
+}
+
+.col, .row {
+    display: flex;
+    min-height: 0; /* allows children to be scrollable */
 }
 
 .col {
-    display: flex;
     flex-direction: column;
 }
 
 .row {
-    display: flex;
     flex-direction: row;
 }
 
@@ -18,14 +25,30 @@ body {
     flex: 1;
 }
 
+.box {
+    padding: 8px;
+    gap: 8px;
+    outline: 1px solid currentcolor;
+}
+
 .scroll {
     overflow-y: scroll;
 }
 
-p {
-    margin: 0.5em 0;
-}
-
 .char-input {
     width: 2em;
+}
+
+input {
+    color: inherit;
+    background: inherit;
+    border: 1px solid currentcolor;
+    font-size: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: black;
+        color: white;
+    }
 }

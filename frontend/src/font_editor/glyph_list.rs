@@ -18,8 +18,8 @@ pub fn glyph_list(state: State) -> View<G> {
     });
 
     view! {
-        div(class="scroll") {
-            p {
+        div(class="col box scroll") {
+            div {
                 label {
                     "Add glyph "
                     CharInput(add_glyph)

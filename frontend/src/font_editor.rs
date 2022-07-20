@@ -22,7 +22,7 @@ pub fn body() -> View<G> {
     ));
 
     view! {
-        p {
+        div(class="box") {
             (db_status_string.get())
         }
         div(class="row fill") {
