@@ -12,9 +12,7 @@ pub fn glyph_list(state: State) -> View<G> {
     let char_input = Signal::new(String::new());
 
     let add_glyph = cloned!(state => move |char| {
-        let mut map = (*state.glyphs.get()).clone();
-        map.insert(char, Signal::new(Glyph::new(char)));
-        state.glyphs.set(map);
+        state.add_glyph(char);
     });
 
     view! {

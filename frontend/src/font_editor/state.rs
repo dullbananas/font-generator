@@ -2,7 +2,7 @@ use crate::error::{DbError};
 use deku::{DekuContainerRead, DekuContainerWrite, DekuError};
 use shared::glyph::{Glyph};
 use rexie::{Rexie};
-use std::collections::{BTreeMap};
+use std::collections::btree_map::{BTreeMap, Entry};
 use std::cell::{RefCell};
 use std::rc::{Rc};
 use sycamore::reactive::{Signal};
@@ -76,5 +76,15 @@ impl State {
         self.db.replace(Some(db));
 
         Ok(())
+    }
+
+    /// Adds a glyph for the given character if it doesn't already exist
+    pub fn add_glyph(&self, char: char) {
+        let mut glyphs = (*self.glyphs.get()).clone();
+
+        if let Entry::Vacant(entry) = glyphs.entry(char) {
+            entry.insert(Signal::new(Glyph::new(char)));
+            self.glyphs.set(glyphs);
+        }
     }
 }
