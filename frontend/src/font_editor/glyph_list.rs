@@ -1,4 +1,5 @@
 use crate::char_input::{CharInput};
+use crate::glyph_svg::{GlyphSvg};
 use shared::glyph::{Glyph};
 use super::state::{State};
 use sycamore::prelude::*;
@@ -29,7 +30,10 @@ pub fn glyph_list(state: State) -> View<G> {
             Keyed(KeyedProps {
                 iterable: glyphs_vec,
                 template: |glyph| view! {
-                    div {
+                    div(class="row gap") {
+                        div(class="thumbnail") {
+                            GlyphSvg(glyph.handle())
+                        }
                         (glyph.get().char())
                     }
                 },

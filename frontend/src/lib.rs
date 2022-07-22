@@ -1,6 +1,7 @@
 mod char_input;
 mod error;
 mod font_editor;
+mod glyph_svg;
 
 use sycamore::prelude::*;
 use sycamore_router::{HistoryIntegration, Route, Router, RouterProps};

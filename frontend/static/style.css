@@ -26,16 +26,30 @@ body {
 
 .box {
     padding: 8px;
-    gap: 8px;
     outline: 1px solid currentcolor;
+}
+
+.box, .gap {
+    gap: 8px;
 }
 
 .scroll {
     overflow-y: scroll;
 }
 
+.scroll > * {
+    /* https://stackoverflow.com/questions/21515042/scrolling-a-flexbox-with-overflowing-content/69889010#69889010 */
+    flex-shrink: 0;
+}
+
 .char-input {
     width: 2em;
+}
+
+.thumbnail {
+    width: 4em;
+    height: 4em;
+    border: 1px solid currentcolor;
 }
 
 input {

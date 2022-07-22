@@ -89,6 +89,61 @@ impl Glyph {
         fastrand::shuffle(&mut variants);
         variants
     }
+
+    /// Converts the glyph to a string for the `d` attribute in an SVG `path` element
+    ///
+    /// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
+    pub fn to_svg_path_d(&self) -> String {
+        fn push_num(string: &mut String, num: f64) {
+            // Format looks like +222.222
+            string.push_str(&format!("{:+08.3}", num));
+        }
+
+        fn path_to_commands(path: &Path) -> Option<String> {
+            let points = &path.points;
+            let first_point = points.first()?;
+
+            // Convert [0, 1, 2, .., n] in `points` to [(0, 1), (1, 2), .., (n, 0)] in `pairs`
+            let pairs = {
+                let mut iter = points.iter().peekable();
+                std::iter::from_fn(move || {
+                    let next = iter.next()?;
+                    Some((next, *iter.peek().unwrap_or(&first_point)))
+                })
+            };
+
+            let mut result = String::with_capacity(1024);
+            result.push('M');
+            push_num(&mut result, first_point.x);
+            push_num(&mut result, first_point.y);
+            for (p0, p1) in pairs {
+                // Cubic bezier curve
+                result.push('C');
+                for (factor, point) in [(1.0, p0), (-1.0, p1)] {
+                    let scaled_factor = factor * point.curviness;
+                    push_num(
+                        &mut result,
+                        point.x + (scaled_factor * f64::sin(point.radians)),
+                    );
+                    push_num(
+                        &mut result,
+                        point.y - (scaled_factor * f64::cos(point.radians)),
+                    );
+                }
+                push_num(&mut result, p1.x);
+                push_num(&mut result, p1.y);
+            }
+            result.push('Z');
+
+            Some(result)
+        }
+
+        self
+            .paths
+            .iter()
+            .filter_map(path_to_commands)
+            .collect()
+    }
 }
 
 impl Path {
