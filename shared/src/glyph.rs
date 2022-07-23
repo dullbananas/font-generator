@@ -22,10 +22,19 @@ pub struct Path {
 #[derive(DekuRead, DekuWrite, Clone, PartialEq)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Point {
-    x: f64,
-    y: f64,
-    radians: f64,
-    curviness: f64,
+    /// 0 to 32767 from left to right
+    x: i16,
+    /// 0 to 32767 from up to down
+    y: i16,
+    /// In the curve from this point to the next point, `radians` is the angle from this point (P0) to P1.
+    ///
+    /// In the curve from the previous point to this point, `radians` is the angle from P2 to this point (P3).
+    ///
+    /// https://upload.wikimedia.org/wikipedia/commons/d/d0/Bezier_curve.svg
+    ///
+    /// 0 radians points to the right, and it turns clockwise when increasing.
+    radians: f32,
+    curviness: i16,
 }
 
 // `Glyph` must implement `Eq` to be used with `sycamore::flow::Keyed` because of lukechu10
@@ -94,9 +103,9 @@ impl Glyph {
     ///
     /// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
     pub fn to_svg_path_d(&self) -> String {
-        fn push_num(string: &mut String, num: f64) {
-            // Format looks like +222.222
-            string.push_str(&format!("{:+08.3}", num));
+        fn push_num(string: &mut String, num: i16) {
+            // 5 digits prefixed with + or -
+            string.push_str(&format!("{:+06}", num));
         }
 
         fn path_to_commands(path: &Path) -> Option<String> {
@@ -119,16 +128,11 @@ impl Glyph {
             for (p0, p1) in pairs {
                 // Cubic bezier curve
                 result.push('C');
-                for (factor, point) in [(1.0, p0), (-1.0, p1)] {
-                    let scaled_factor = factor * point.curviness;
-                    push_num(
-                        &mut result,
-                        point.x + (scaled_factor * f64::sin(point.radians)),
-                    );
-                    push_num(
-                        &mut result,
-                        point.y - (scaled_factor * f64::cos(point.radians)),
-                    );
+                for (factor, point) in [(1, p0), (-1, p1)] {
+                    let distance = point.curviness * factor;
+                    let (x, y) = point.curve_point(distance);
+                    push_num(&mut result, x);
+                    push_num(&mut result, y);
                 }
                 push_num(&mut result, p1.x);
                 push_num(&mut result, p1.y);
@@ -150,16 +154,16 @@ impl Path {
     fn new() -> Self {
         let points: Vec<Point> =
             [
-                (16.0, 8.0, 90.0, 4.0),
-                (24.0, 16.0, 180.0, 4.0),
-                (8.0, 16.0, 0.0, 4.0),
+                (2, 1, 0.0),
+                (3, 2, 90.0),
+                (1, 2, 270.0),
             ]
             .iter()
-            .map(|(x, y, degrees, curviness)| Point {
-                x: *x,
-                y: *y,
-                radians: degrees * (std::f64::consts::PI / 180.0),
-                curviness: *curviness,
+            .map(|(x, y, degrees): &(i16, i16, f32)| Point {
+                x: x * 8192,
+                y: y * 8192,
+                radians: degrees.to_radians(),
+                curviness: 4096,
             })
             .collect();
 
@@ -189,26 +193,39 @@ impl Path {
 impl Point {
     fn new() -> Self {
         Point {
-            x: 0.0,
-            y: 0.0,
+            x: 0,
+            y: 0,
             radians: 0.0,
-            curviness: 1.0,
+            curviness: 4096,
         }
     }
 
+    fn curve_point(&self, distance: i16) -> (i16, i16) {
+        (
+            self.x + (distance * (self.radians.cos() as i16)),
+            self.y + (distance * (self.radians.sin() as i16)),
+        )
+    }
+
     fn mutate(&mut self) {
-        fn rand_between(min: f64, max: f64) -> f64 {
-            min + (fastrand::f64() * (max - min))
+        fn rand_between(min: f32, max: f32) -> f32 {
+            min + (fastrand::f32() * (max - min))
         }
 
         /// Adds a random number between `-scale` and `scale`
-        fn mutate_float(num: &mut f64, scale: f64) {
+        fn mutate_float(num: &mut f32, scale: f32) {
             *num += rand_between(-scale, scale).powi(3);
         }
 
-        mutate_float(&mut self.x, 0.5);
-        mutate_float(&mut self.y, 0.5);
+        /// Adds a random integer between `-scale` and `scale`
+        fn mutate_int(num: &mut i16, scale: i16) {
+            let change_amount = fastrand::i16(-scale..=scale);
+            *num = std::cmp::max(0, num.saturating_add(change_amount));
+        }
+
+        mutate_int(&mut self.x, 10);
+        mutate_int(&mut self.y, 10);
         mutate_float(&mut self.radians, 0.1);
-        mutate_float(&mut self.curviness, 1.0);
+        mutate_int(&mut self.curviness, 10);
     }
 }
