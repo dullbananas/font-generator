@@ -108,8 +108,7 @@ impl Glyph {
             string.push_str(&format!("{:+06}", num));
         }
 
-        fn path_to_commands(path: &Path) -> Option<String> {
-            let points = &path.points;
+        fn points_to_commands(points: &[Point]) -> Option<String> {
             let first_point = points.first()?;
 
             // Convert [0, 1, 2, .., n] in `points` to [(0, 1), (1, 2), .., (n, 0)] in `pairs`
@@ -145,7 +144,7 @@ impl Glyph {
         self
             .paths
             .iter()
-            .filter_map(path_to_commands)
+            .filter_map(|path| points_to_commands(&path.points))
             .collect()
     }
 }
