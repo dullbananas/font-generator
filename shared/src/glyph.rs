@@ -103,13 +103,18 @@ impl Glyph {
     ///
     /// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
     pub fn to_svg_path_d(&self) -> String {
-        fn push_num(string: &mut String, num: i16) {
+        fn push_nums(string: &mut String, x: i16, y: i16) {
             // 5 digits prefixed with + or -
-            string.push_str(&format!("{:+06}", num));
+            for num in [x, y] {
+                string.push_str(&format!("{:+06}", num));
+            }
         }
 
-        fn points_to_commands(points: &[Point]) -> Option<String> {
-            let first_point = points.first()?;
+        fn points_to_commands(string: &mut String, points: &[Point]) {
+            let first_point = match points.first() {
+                Some(point) => point,
+                None => return,
+            };
 
             // Convert [0, 1, 2, .., n] in `points` to [(0, 1), (1, 2), .., (n, 0)] in `pairs`
             let pairs = {
@@ -120,32 +125,27 @@ impl Glyph {
                 })
             };
 
-            let mut result = String::with_capacity(1024);
-            result.push('M');
-            push_num(&mut result, first_point.x);
-            push_num(&mut result, first_point.y);
+            string.push('M');
+            push_nums(string, first_point.x, first_point.y);
             for (p0, p1) in pairs {
                 // Cubic bezier curve
-                result.push('C');
+                string.push('C');
                 for (factor, point) in [(1, p0), (-1, p1)] {
                     let distance = point.curviness * factor;
                     let (x, y) = point.curve_point(distance);
-                    push_num(&mut result, x);
-                    push_num(&mut result, y);
+                    push_nums(string, x, y);
                 }
-                push_num(&mut result, p1.x);
-                push_num(&mut result, p1.y);
+                push_nums(string, p1.x, p1.y);
             }
-            result.push('Z');
-
-            Some(result)
+            string.push('Z');
         }
 
-        self
-            .paths
-            .iter()
-            .filter_map(|path| points_to_commands(&path.points))
-            .collect()
+        let mut string = String::with_capacity(1024);
+        for path in &self.paths {
+            points_to_commands(&mut string, &path.points);
+        }
+
+        string
     }
 }
 
