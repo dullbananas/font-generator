@@ -29,12 +29,26 @@ pub fn glyph_list(state: State) -> View<G> {
             }
             Keyed(KeyedProps {
                 iterable: glyphs_vec,
-                template: |glyph| view! {
-                    div(class="row gap") {
-                        div(class="thumbnail") {
-                            GlyphSvg(glyph.handle())
+                template: move |glyph| {
+                    let classes = create_selector(cloned!(state, glyph => move ||
+                        if *state.current_char.get() == (*glyph.get()).char {
+                            "row gap selected"
+                        } else {
+                            "row gap"
                         }
-                        (glyph.get().char)
+                    ));
+
+                    let change_glyph = cloned!(state, glyph => move |_|
+                        state.current_char.set((*glyph.get()).char)
+                    );
+
+                    view! {
+                        div(class=classes.get(), on:click=change_glyph) {
+                            div(class="thumbnail") {
+                                GlyphSvg(glyph.handle())
+                            }
+                            (glyph.get().char)
+                        }
                     }
                 },
                 key: |glyph| glyph.get().char,

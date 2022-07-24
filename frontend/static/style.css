@@ -42,6 +42,10 @@ body {
     flex-shrink: 0;
 }
 
+.selected {
+    opacity: 0.5;
+}
+
 .char-input {
     width: 2em;
 }
