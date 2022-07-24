@@ -34,10 +34,10 @@ pub fn glyph_list(state: State) -> View<G> {
                         div(class="thumbnail") {
                             GlyphSvg(glyph.handle())
                         }
-                        (glyph.get().char())
+                        (glyph.get().char)
                     }
                 },
-                key: |glyph| glyph.get().char(),
+                key: |glyph| glyph.get().char,
             })
         }
     }

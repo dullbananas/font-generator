@@ -1,11 +1,14 @@
 use crate::util::{char_map, char_write};
 use deku::prelude::*;
 
+const X: usize = 0;
+const Y: usize = 1;
+
 #[derive(DekuRead, DekuWrite, Clone, PartialEq, Eq)]
 #[deku(endian = "big")]
 pub struct Glyph {
     #[deku(map = "char_map", writer = "char_write(deku::output, char)")]
-    char: char,
+    pub char: char,
     #[deku(bits_read = "deku::rest.len()")]
     paths: Vec<Path>,
 }
@@ -22,10 +25,8 @@ pub struct Path {
 #[derive(DekuRead, DekuWrite, Clone, PartialEq)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct Point {
-    /// 0 to 32767 from left to right
-    x: i16,
-    /// 0 to 32767 from up to down
-    y: i16,
+    /// This stores coordinates as `[x, y]`. Both numbers go from 0 (top left) to 32767. Use the `X` and `Y` constants for indexing.
+    pub position: [i16; 2],
     /// In the curve from this point to the next point, `radians` is the angle from this point (P0) to P1.
     ///
     /// In the curve from the previous point to this point, `radians` is the angle from P2 to this point (P3).
@@ -33,8 +34,8 @@ pub struct Point {
     /// https://upload.wikimedia.org/wikipedia/commons/d/d0/Bezier_curve.svg
     ///
     /// 0 radians points to the right, and it turns clockwise when increasing.
-    radians: f32,
-    curviness: i16,
+    pub radians: f32,
+    pub curviness: i16,
 }
 
 // `Glyph` must implement `Eq` to be used with `sycamore::flow::Keyed` because of lukechu10
@@ -47,10 +48,6 @@ impl Glyph {
             char: char,
             paths: vec![Path::new()],
         }
-    }
-
-    pub fn char(&self) -> char {
-        self.char
     }
 
     pub fn paths(&self) -> &[Path] {
@@ -69,8 +66,10 @@ impl Glyph {
 
     pub fn add_point(&mut self, path_id: usize) {
         if let Some(path) = self.paths.get_mut(path_id) {
-            path.points.push(Point::new());
-            let _ = DekuUpdate::update(path);
+            if path.count < u16::MAX {
+                path.points.push(Point::new());
+                DekuUpdate::update(path).unwrap();
+            }
         }
     }
 
@@ -103,9 +102,9 @@ impl Glyph {
     ///
     /// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
     pub fn to_svg_path_d(&self) -> String {
-        fn push_nums(string: &mut String, x: i16, y: i16) {
+        fn push_coordinates(string: &mut String, pair: [i16; 2]) {
             // 5 digits prefixed with + or -
-            for num in [x, y] {
+            for num in pair {
                 string.push_str(&format!("{:+06}", num));
             }
         }
@@ -126,16 +125,15 @@ impl Glyph {
             };
 
             string.push('M');
-            push_nums(string, first_point.x, first_point.y);
+            push_coordinates(string, first_point.position);
             for (p0, p1) in pairs {
                 // Cubic bezier curve
                 string.push('C');
                 for (factor, point) in [(1, p0), (-1, p1)] {
-                    let distance = point.curviness * factor;
-                    let (x, y) = point.curve_point(distance);
-                    push_nums(string, x, y);
+                    let distance = factor * point.curviness;
+                    push_coordinates(string, point.curve_point(distance));
                 }
-                push_nums(string, p1.x, p1.y);
+                push_coordinates(string, p1.position);
             }
             string.push('Z');
         }
@@ -159,8 +157,7 @@ impl Path {
             ]
             .iter()
             .map(|(x, y, degrees): &(i16, i16, f32)| Point {
-                x: x * 8192,
-                y: y * 8192,
+                position: [x * 8192, y * 8192],
                 radians: degrees.to_radians(),
                 curviness: 4096,
             })
@@ -192,18 +189,21 @@ impl Path {
 impl Point {
     fn new() -> Self {
         Point {
-            x: 0,
-            y: 0,
+            position: [0, 0],
             radians: 0.0,
             curviness: 4096,
         }
     }
 
-    fn curve_point(&self, distance: i16) -> (i16, i16) {
-        (
-            self.x + (distance * (self.radians.cos() as i16)),
-            self.y + (distance * (self.radians.sin() as i16)),
-        )
+    fn curve_point(&self, distance: i16) -> [i16; 2] {
+        let transform_component = |component, ratio| {
+            let transform_amount = ratio * f32::from(distance);
+            self.position[component] + (transform_amount as i16)
+        };
+        [
+            transform_component(X, self.radians.cos()),
+            transform_component(Y, self.radians.sin()),
+        ]
     }
 
     fn mutate(&mut self) {
@@ -222,8 +222,8 @@ impl Point {
             *num = std::cmp::max(0, num.saturating_add(change_amount));
         }
 
-        mutate_int(&mut self.x, 10);
-        mutate_int(&mut self.y, 10);
+        mutate_int(&mut self.position[X], 10);
+        mutate_int(&mut self.position[Y], 10);
         mutate_float(&mut self.radians, 0.1);
         mutate_int(&mut self.curviness, 10);
     }

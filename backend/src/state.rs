@@ -183,6 +183,6 @@ impl State {
     }
 
     async fn get_glyph_char(&self, glyph_id: Id<Glyph>) -> Result<char, E> {
-        Ok(self.glyphs.get(glyph_id).await?.char())
+        Ok(self.glyphs.get(glyph_id).await?.char)
     }
 }

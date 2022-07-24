@@ -68,7 +68,7 @@ impl State {
                             .value();
                         DekuContainerRead::from_bytes((&bytes, 0))?.1
                     };
-                    Ok((glyph.char(), Signal::new(glyph)))
+                    Ok((glyph.char, Signal::new(glyph)))
                 })
                 .collect::<Result<BTreeMap<char, Signal<Glyph>>, DekuError>>()?
         );
