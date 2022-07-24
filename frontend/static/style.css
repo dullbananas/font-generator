@@ -59,6 +59,10 @@ input {
     font-size: inherit;
 }
 
+path {
+    fill: currentcolor;
+}
+
 body, h2 {
     margin: 0;
 }
