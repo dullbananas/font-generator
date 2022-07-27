@@ -19,22 +19,20 @@ enum PageRoute {
 pub fn init() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    sycamore::render(|| view! {
+    sycamore::render(|cx| view! { cx,
         Router(RouterProps::new(
             HistoryIntegration::new(),
-            |route: ReadSignal<PageRoute>| {
-                let body = create_memo(move || match route.get().as_ref() {
-                    PageRoute::FontEditor => view! {
-                        font_editor::Body()
-                    },
-                    PageRoute::NotFound => view! {
-                        "The requested page does not exist."
-                    },
-                });
-
-                view! {
+            |cx, route: &ReadSignal<PageRoute>| {
+                view! { cx,
                     div(class="col fill") {
-                        (body.get().as_ref().clone())
+                        (match *route.get() {
+                            PageRoute::FontEditor => view! { cx,
+                                font_editor::Body()
+                            },
+                            PageRoute::NotFound => view! { cx,
+                                "The requested page does not exist."
+                            },
+                        })
                     }
                 }
             },

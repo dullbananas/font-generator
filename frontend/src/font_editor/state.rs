@@ -3,19 +3,17 @@ use deku::{DekuContainerRead, DekuContainerWrite, DekuError};
 use shared::glyph::{Glyph};
 use rexie::{Rexie};
 use std::collections::btree_map::{BTreeMap, Entry};
-use std::cell::{RefCell};
-use std::rc::{Rc};
-use sycamore::reactive::{Signal};
+use sycamore::prelude::*;
 use wasm_bindgen::prelude::{wasm_bindgen};
 
 const GLYPHS_STORE: &str = "glyphs";
 
-#[derive(Clone)]
-pub struct State {
-    pub current_char: Signal<char>,
-    pub db_status: Signal<Option<Result<(), DbError>>>,
-    pub glyphs: Signal<BTreeMap<char, Signal<Glyph>>>,
-    db: Rc<RefCell<Option<Rexie>>>,
+#[derive(Copy, Clone)]
+pub struct State<'a> {
+    pub current_char: &'a Signal<char>,
+    pub db_status: &'a Signal<Option<Result<(), DbError>>>,
+    pub glyphs: &'a Signal<BTreeMap<char, RcSignal<Glyph>>>,
+    db: &'a Signal<Option<Rexie>>,
 }
 
 #[wasm_bindgen(js_namespace = fontGeneratorImports)]
@@ -29,19 +27,17 @@ extern "C" {
     fn value(this: &GlyphDbObject) -> Box<[u8]>;
 }
 
-impl Default for State {
-    fn default() -> Self {
+impl<'a> State<'a> {
+    pub fn new(cx: Scope<'a>) -> Self {
         State {
-            current_char: Signal::new('a'),
-            db: Rc::default(),
-            db_status: Signal::default(),
-            glyphs: Signal::default(),
+            current_char: create_signal(cx, 'a'),
+            db: create_signal(cx, None),
+            db_status: create_signal(cx, None),
+            glyphs: create_signal(cx, BTreeMap::new()),
         }
     }
-}
 
-impl State {
-    pub async fn init(&self) {
+    pub async fn init(self) {
         self.db_status.set(Some(self.init_db().await));
     }
 
@@ -68,23 +64,22 @@ impl State {
                             .value();
                         DekuContainerRead::from_bytes((&bytes, 0))?.1
                     };
-                    Ok((glyph.char, Signal::new(glyph)))
+                    Ok((glyph.char, create_rc_signal(glyph)))
                 })
-                .collect::<Result<BTreeMap<char, Signal<Glyph>>, DekuError>>()?
+                .collect::<Result<BTreeMap<_, _>, DekuError>>()?
         );
 
-        self.db.replace(Some(db));
+        self.db.set(Some(db));
 
         Ok(())
     }
 
     /// Adds a glyph for the given character if it doesn't already exist
     pub fn add_glyph(&self, char: char) {
-        let mut glyphs = (*self.glyphs.get()).clone();
+        let mut glyphs = self.glyphs.modify();
 
         if let Entry::Vacant(entry) = glyphs.entry(char) {
-            entry.insert(Signal::new(Glyph::new(char)));
-            self.glyphs.set(glyphs);
+            entry.insert(create_rc_signal(Glyph::new(char)));
         }
     }
 }

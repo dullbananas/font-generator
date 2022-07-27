@@ -11,7 +11,7 @@ console_error_panic_hook = { version = "0.1" }
 deku = { version = "0.13" }
 rexie = { version = "0.4", default-features = false }
 shared = { version = "0.1.0", path = "../shared" }
-sycamore = { version = "0.7" }
-sycamore-router = { version = "0.7" }
+sycamore = { version = "0.8.0-beta.7", features = ["suspense"] }
+sycamore-router = { version = "0.8.0-beta.7" }
 wasm-bindgen = { version = "0.2.81" }
 wasm-bindgen-futures = { version = "0.4" }

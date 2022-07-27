@@ -4,19 +4,19 @@ use shared::glyph::{Glyph};
 use super::state::{State};
 use sycamore::prelude::*;
 
-#[component(GlyphList<G>)]
-pub fn glyph_list(state: State) -> View<G> {
-    let glyphs_vec: ReadSignal<Vec<Signal<Glyph>>> = create_memo(cloned!(state => move ||
+#[component]
+pub fn GlyphList<'a, G: Html>(cx: Scope<'a>, state: State<'a>) -> View<G> {
+    let glyphs_vec: &ReadSignal<Vec<_>> = create_memo(cx, ||
         state.glyphs.get().values().cloned().collect()
-    ));
+    );
 
-    let char_input = Signal::new(String::new());
+    let char_input = create_signal(cx, String::new());
 
-    let add_glyph = cloned!(state => move |char| {
+    let add_glyph = move |char| {
         state.add_glyph(char);
-    });
+    };
 
-    view! {
+    view! { cx,
         div(class="col box scroll") {
             h2 {
                 "Glyphs"
@@ -27,32 +27,36 @@ pub fn glyph_list(state: State) -> View<G> {
                     CharInput(add_glyph)
                 }
             }
-            Keyed(KeyedProps {
+            Keyed {
                 iterable: glyphs_vec,
-                template: move |glyph| {
-                    let classes = create_selector(cloned!(state, glyph => move ||
-                        if *state.current_char.get() == (*glyph.get()).char {
+                view: |cx, glyph| {
+                    let char = create_selector(cx, {
+                        let glyph = glyph.clone();
+                        move || (*glyph.get()).char
+                    });
+
+                    let classes = create_selector(cx, ||
+                        if state.current_char.get() == char.get() {
                             "row gap selected"
                         } else {
                             "row gap"
                         }
-                    ));
-
-                    let change_glyph = cloned!(state, glyph => move |_|
-                        state.current_char.set((*glyph.get()).char)
                     );
 
-                    view! {
+                    let change_glyph = |_|
+                        state.current_char.set_rc(char.get());
+
+                    view! { cx,
                         div(class=classes.get(), on:click=change_glyph) {
                             div(class="thumbnail") {
-                                GlyphSvg(glyph.handle())
+                                GlyphSvg(glyph)
                             }
-                            (glyph.get().char)
+                            (char.get())
                         }
                     }
                 },
                 key: |glyph| glyph.get().char,
-            })
+            }
         }
     }
 }
